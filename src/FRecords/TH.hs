@@ -1,8 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module FRecords.TH
   ( makeFRecord
   ) where
 
---import FRecords.Classes
+import FRecords.Classes
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
@@ -11,7 +13,11 @@ makeFRecord :: Name -> DecsQ
 makeFRecord tyName = do
   info <- reify tyName
   case info of
-    TyConI dec -> makeFRecordForDec dec
+    TyConI dec -> do
+      genDec <- makeFRecordForDec dec
+      let bothDecs = BothDecs { sourceDec = dec, generatedDec = genDec }
+      ffunctorDecs <- makeFFunctorInstance bothDecs
+      pure $ [genDec] ++ ffunctorDecs
     _ -> fail "makeFRecord: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
@@ -19,7 +25,7 @@ modifyName f name =
   let Name (OccName str) flavour = name
   in Name (OccName (f str)) flavour
 
-makeFRecordForDec :: Dec -> DecsQ
+makeFRecordForDec :: Dec -> DecQ
 makeFRecordForDec dec =
   case dec of
     DataD ctx tyName tyVars constrs _deriving -> do
@@ -28,14 +34,14 @@ makeFRecordForDec dec =
           fTyName = modifyName ("F" ++) tyName
           fTyVars = tyVars ++ [functorTyVarBndr]
       fConstrs <- mapM (makeFConForCon functorTyVarName) constrs
-      return [DataD fCtx fTyName fTyVars fConstrs fDeriving]
+      return (DataD fCtx fTyName fTyVars fConstrs fDeriving)
     NewtypeD ctx tyName tyVars constr _deriving -> do
       (functorTyVarName, functorTyVarBndr) <- functorTyVar
       let fCtx = ctx
           fTyName = modifyName ("F" ++) tyName
           fTyVars = tyVars ++ [functorTyVarBndr]
       fConstr <- makeFConForCon functorTyVarName constr
-      return [NewtypeD fCtx fTyName fTyVars fConstr fDeriving]
+      return (NewtypeD fCtx fTyName fTyVars fConstr fDeriving)
     _ -> fail $ "makeFRecord not implemented for " ++ show dec
   where
     fDeriving = []
@@ -45,7 +51,6 @@ makeFRecordForDec dec =
           starToStarKind = starK `kindArrow` starK
           functorTyVarBndr = KindedTV functorTyVarName starToStarKind
       return (functorTyVarName, functorTyVarBndr)
-    
 
 makeFConForCon :: Name -> Con -> ConQ
 makeFConForCon functorTyVarName con =
@@ -72,29 +77,55 @@ makeFConForCon functorTyVarName con =
         Unpacked -> IsStrict
         NotStrict -> NotStrict
 
-{-
-  mkFunctor1' :: Dec -> Q [Dec]
-  mkFunctor1' (DataD _ tnm pars cons _) =
-    do names <- mapM newName $ map (('v':) . show) [1..(30 :: Int)]
-       let (ps, f) = (\(x: xs) -> (reverse xs, x)) $ reverse $ map getTV pars
-           parName = mkName "f"
-           mkCons c =
-             let (cnm, tps) = getCons c
-                 (insts, exps) = unzip $ zipWith mkType names tps
-             in ( concat insts
-                , Clause
-                    [VarP parName, ConP cnm $ map VarP $ take (length exps) names]
-                    (NormalB $ foldl AppE (ConE cnm) exps)
-                    []
-                )
-           mkType vnm (AppT tf a) | tf == VarT f = ([], VarE parName `AppE` VarE vnm)
-                                  | a == VarT f  = ([tf], VarE (mkName "fmap1") `AppE` VarE parName `AppE` VarE vnm)
-           mkType vnm _ = ([], VarE vnm)
-           (preds, clauses) = first concat $ unzip $ map mkCons cons
-       return [InstanceD
-                   (map (ClassP (mkName "Functor1") . (:[])) preds)
-                   (ConT (mkName "Functor1") `AppT` (foldl AppT (ConT tnm) $ map VarT ps))
-                   [FunD (mkName "fmap1") clauses]
-              ]
-  mkFunctor1' _ = error "Can only derive Functor1 for data type"
--}
+data BothDecs = BothDecs { sourceDec :: Dec, generatedDec :: Dec }
+
+makeFFunctorInstance :: BothDecs -> DecsQ
+makeFFunctorInstance bothDecs =
+  case bothDecs of
+    BothDecs (DataD _ _tyName tyVars _constrs _) (DataD _ fTyName _ fConstrs _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FFunctor $(mkS fTyName tyVarNames) where
+            ffmap f rec =
+              $(caseE [e| rec |] (map (ffmapConstrCase 'f) fConstrs))
+        |]
+    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FFunctor $(mkS fTyName tyVarNames) where
+            ffmap f rec =
+              $(caseE [e| rec |] [ffmapConstrCase 'f fConstr])
+        |]
+    BothDecs source generated ->
+      fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
+        " and " ++ show generated
+  where
+    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
+    appEs :: ExpQ -> [ExpQ] -> ExpQ
+    appEs = foldl appE
+    ffmapMatch :: Name -> Name -> Int -> MatchQ
+    ffmapMatch funName constrName constrArity = do
+      argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
+      let pat = conP constrName (map varP argNames)
+          body = conE constrName `appEs` map (\v -> varE funName `appE` varE v) argNames
+      match pat (normalB body) []
+    ffmapConstrCase :: Name -> Con -> MatchQ
+    ffmapConstrCase funName constr =
+      case constr of
+        NormalC fConName fArgTypes ->
+          ffmapMatch funName fConName (length fArgTypes)
+        RecC fConName fArgTypes ->
+          ffmapMatch funName fConName (length fArgTypes)
+        _ -> fail $ "ffmapConstrCase does not support " ++ show constr
+
+nameFromTyVarBndr :: TyVarBndr -> Name
+nameFromTyVarBndr bndr =
+  case bndr of
+    PlainTV name -> name
+    KindedTV name _kind -> name
+
+-- | Apply arguments to a type constructor.
+conAppsT :: Name -> [Type] -> Type
+conAppsT conName = foldl AppT (ConT conName)

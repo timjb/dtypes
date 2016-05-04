@@ -3,7 +3,10 @@
 
 module Main (main) where
 
+import FRecords.Classes (FFunctor (..), (<<$>>))
 import FRecords.TH
+
+import Data.Foldable (toList)
 
 data Foo a = Bar Int String | Blub () a
 
@@ -20,6 +23,9 @@ makeFRecord ''Url
 maybeUrl1, maybeUrl2 :: FUrl Maybe
 maybeUrl1 = FUrl Nothing
 maybeUrl2 = FUrl (Just "http://haskell.org/")
+
+listUrl :: FUrl []
+listUrl = ffmap toList maybeUrl1
 
 data Person
   = Person
@@ -39,6 +45,9 @@ unparsedMe
   , fpersonAge = Const "21"
   , fpersonHomepage = Const "http://timbaumann.info/"
   }
+
+unitMe :: FPerson (Const ())
+unitMe = (\(Const _) -> Const ()) <<$>> unparsedMe
 
 main :: IO ()
 main = return ()

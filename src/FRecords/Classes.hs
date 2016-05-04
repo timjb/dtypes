@@ -6,6 +6,7 @@ module FRecords.Classes
   ( Trafo
   --, (==>)
   , FFunctor (..)
+  , (<<$>>)
   , TrafoComp (..)
   , ($$)
   --, (==>>)
