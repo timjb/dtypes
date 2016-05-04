@@ -23,17 +23,29 @@ makeFRecordForDec :: Dec -> DecsQ
 makeFRecordForDec dec =
   case dec of
     DataD ctx tyName tyVars constrs _deriving -> do
-      functorTyVarName <- newName "f"
+      (functorTyVarName, functorTyVarBndr) <- functorTyVar
       let fCtx = ctx
           fTyName = modifyName ("F" ++) tyName
-          fDeriving = []
-          kindArrow from to = arrowK `appK` from `appK` to
-          starToStarKind = starK `kindArrow` starK
-          functorTyVarBndr = KindedTV functorTyVarName starToStarKind
           fTyVars = tyVars ++ [functorTyVarBndr]
       fConstrs <- mapM (makeFConForCon functorTyVarName) constrs
       return [DataD fCtx fTyName fTyVars fConstrs fDeriving]
+    NewtypeD ctx tyName tyVars constr _deriving -> do
+      (functorTyVarName, functorTyVarBndr) <- functorTyVar
+      let fCtx = ctx
+          fTyName = modifyName ("F" ++) tyName
+          fTyVars = tyVars ++ [functorTyVarBndr]
+      fConstr <- makeFConForCon functorTyVarName constr
+      return [NewtypeD fCtx fTyName fTyVars fConstr fDeriving]
     _ -> fail $ "makeFRecord not implemented for " ++ show dec
+  where
+    fDeriving = []
+    functorTyVar = do
+      functorTyVarName <- newName "f"
+      let kindArrow from to = arrowK `appK` from `appK` to
+          starToStarKind = starK `kindArrow` starK
+          functorTyVarBndr = KindedTV functorTyVarName starToStarKind
+      return (functorTyVarName, functorTyVarBndr)
+    
 
 makeFConForCon :: Name -> Con -> ConQ
 makeFConForCon functorTyVarName con =
@@ -42,13 +54,19 @@ makeFConForCon functorTyVarName con =
       let fConName = modifyName ("F" ++) conName
       fArgTypes <- mapM makeFStrictType argTypes
       return (NormalC fConName fArgTypes)
+    RecC conName argTypes -> do
+      let fConName = modifyName ("F" ++) conName
+      fArgTypes <- mapM makeFVarStrictType argTypes
+      return (RecC fConName fArgTypes)
     _ -> fail $ "makeFConForCon not implemented for " ++ show con
   where
-    makeFStrictType (strictness, fieldType) = do
-      let fStrictness = fFieldStrictnessAnnotation strictness
-          fFieldType = (VarT functorTyVarName) `AppT` fieldType
-      return (fStrictness, fFieldType)
-    fFieldStrictnessAnnotation strictness =
+    makeFStrictType (strictness, ty) = do
+      return (fFieldStrictness strictness, fFieldType ty)
+    makeFVarStrictType (fieldName, strictness, ty) = do
+      return (fFieldName fieldName, fFieldStrictness strictness, fFieldType ty)
+    fFieldName = modifyName ("f" ++)
+    fFieldType ty = (VarT functorTyVarName) `AppT` ty
+    fFieldStrictness strictness =
       case strictness of
         IsStrict -> IsStrict
         Unpacked -> IsStrict
