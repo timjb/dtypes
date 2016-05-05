@@ -17,7 +17,8 @@ makeFRecord tyName = do
       genDec <- makeFRecordForDec dec
       let bothDecs = BothDecs { sourceDec = dec, generatedDec = genDec }
       ffunctorDecs <- makeFFunctorInstance bothDecs
-      pure $ [genDec] ++ ffunctorDecs
+      ftraverseDecs <- makeFTraversableInstance bothDecs
+      pure $ [genDec] ++ ffunctorDecs ++ ftraverseDecs
     _ -> fail "makeFRecord: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
@@ -102,9 +103,10 @@ makeFFunctorInstance bothDecs =
       fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
         " and " ++ show generated
   where
-    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
+    -- | Generates `f arg1 ... argn`
     appEs :: ExpQ -> [ExpQ] -> ExpQ
     appEs = foldl appE
+    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ffmapMatch :: Name -> Name -> Int -> MatchQ
     ffmapMatch funName constrName constrArity = do
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
@@ -120,6 +122,56 @@ makeFFunctorInstance bothDecs =
           ffmapMatch funName fConName (length fArgTypes)
         _ -> fail $ "ffmapConstrCase does not support " ++ show constr
 
+makeFTraversableInstance :: BothDecs -> DecsQ
+makeFTraversableInstance bothDecs =
+  case bothDecs of
+    BothDecs (DataD _ _tyName tyVars _constrs _) (DataD _ fTyName _ fConstrs _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FTraversable $(mkS fTyName tyVarNames) where
+            ftraverse f rec =
+              $(caseE [e| rec |] (map (ftraverseConstrCase 'f) fConstrs))
+        |]
+    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FTraversable $(mkS fTyName tyVarNames) where
+            ftraverse f rec =
+              $(caseE [e| rec |] [ftraverseConstrCase 'f fConstr])
+        |]
+    BothDecs source generated ->
+      fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
+        " and " ++ show generated
+  where
+    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
+    -- | Generates `f <*> arg1 <*> ... <*> argn`
+    apAppEs :: ExpQ -> [ExpQ] -> ExpQ
+    apAppEs = foldl (\g y -> [e| $g <*> $y |])
+    -- | Generates `f <$> arg1 <*> ... <*> argn`
+    liftAppEs :: ExpQ -> [ExpQ] -> ExpQ
+    liftAppEs x args =
+      case args of
+        [] -> [e| pure $x |]
+        firstArg:nextArgs -> apAppEs [e| $x <$> $firstArg |] nextArgs
+    ftraverseMatch :: Name -> Name -> Int -> MatchQ
+    ftraverseMatch funName constrName constrArity = do
+      argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
+      let pat = conP constrName (map varP argNames)
+          mapArg v = [e| unCompose ($(varE funName) $(varE v)) |]
+          body = conE constrName `liftAppEs` map mapArg argNames
+      match pat (normalB body) []
+    ftraverseConstrCase :: Name -> Con -> MatchQ
+    ftraverseConstrCase funName constr =
+      case constr of
+        NormalC fConName fArgTypes ->
+          ftraverseMatch funName fConName (length fArgTypes)
+        RecC fConName fArgTypes ->
+          ftraverseMatch funName fConName (length fArgTypes)
+        _ -> fail $ "ftraverseConstrCase does not support " ++ show constr
+
+-- | Extract the name from a TyVarBndr.
 nameFromTyVarBndr :: TyVarBndr -> Name
 nameFromTyVarBndr bndr =
   case bndr of

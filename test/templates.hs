@@ -1,12 +1,17 @@
+{-# OPTIONS_GHC -F -pgmF htfpp #-}
+
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE KindSignatures #-}
 
 module Main (main) where
 
-import FRecords.Classes (FFunctor (..), (<<$>>))
+import FRecords.Classes
 import FRecords.TH
 
+import Control.Applicative (Const (..))
 import Data.Foldable (toList)
+
+import Test.Framework
 
 data Foo a = Bar Int String | Blub () a
 
@@ -36,8 +41,6 @@ data Person
 
 makeFRecord ''Person
 
-data Const x a = Const { unConst :: x }
-
 unparsedMe :: FPerson (Const String)
 unparsedMe
   = FPerson
@@ -49,5 +52,10 @@ unparsedMe
 unitMe :: FPerson (Const ())
 unitMe = (\(Const _) -> Const ()) <<$>> unparsedMe
 
+serializedMe :: String
+serializedMe = getConst (fsequenceA' unparsedMe)
+
+test_serializedMe = assertEqual serializedMe "Tim Baumann21http://timbaumann.info/"
+
 main :: IO ()
-main = return ()
+main = htfMain htf_thisModulesTests
