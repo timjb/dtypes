@@ -18,7 +18,11 @@ makeFRecord tyName = do
       let bothDecs = BothDecs { sourceDec = dec, generatedDec = genDec }
       ffunctorDecs <- makeFFunctorInstance bothDecs
       ftraverseDecs <- makeFTraversableInstance bothDecs
-      pure $ [genDec] ++ ffunctorDecs ++ ftraverseDecs
+      fapplicativeDecs <-
+          if canDeriveFApplicative bothDecs
+            then makeFApplicativeInstance bothDecs
+            else pure []
+      pure $ [genDec] ++ ffunctorDecs ++ ftraverseDecs ++ fapplicativeDecs
     _ -> fail "makeFRecord: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
@@ -103,9 +107,6 @@ makeFFunctorInstance bothDecs =
       fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
         " and " ++ show generated
   where
-    -- | Generates `f arg1 ... argn`
-    appEs :: ExpQ -> [ExpQ] -> ExpQ
-    appEs = foldl appE
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ffmapMatch :: Name -> Name -> Int -> MatchQ
     ffmapMatch funName constrName constrArity = do
@@ -146,15 +147,6 @@ makeFTraversableInstance bothDecs =
         " and " ++ show generated
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    -- | Generates `f <*> arg1 <*> ... <*> argn`
-    apAppEs :: ExpQ -> [ExpQ] -> ExpQ
-    apAppEs = foldl (\g y -> [e| $g <*> $y |])
-    -- | Generates `f <$> arg1 <*> ... <*> argn`
-    liftAppEs :: ExpQ -> [ExpQ] -> ExpQ
-    liftAppEs x args =
-      case args of
-        [] -> [e| pure $x |]
-        firstArg:nextArgs -> apAppEs [e| $x <$> $firstArg |] nextArgs
     ftraverseMatch :: Name -> Name -> Int -> MatchQ
     ftraverseMatch funName constrName constrArity = do
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
@@ -170,6 +162,109 @@ makeFTraversableInstance bothDecs =
         RecC fConName fArgTypes ->
           ftraverseMatch funName fConName (length fArgTypes)
         _ -> fail $ "ftraverseConstrCase does not support " ++ show constr
+
+canDeriveFApplicative :: BothDecs -> Bool
+canDeriveFApplicative bothDecs =
+  case generatedDec bothDecs of
+    NewtypeD _ _ _ _ _ -> True
+    DataD _ _ _ [_constr] _ -> True
+    _ -> False
+
+makeFApplicativeInstance :: BothDecs -> DecsQ
+makeFApplicativeInstance bothDecs =
+  case bothDecs of
+    BothDecs (DataD _ _tyName tyVars [_constr] _) (DataD _ fTyName _ [fConstr] _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FApplicative $(mkS fTyName tyVarNames) where
+            fpure x = $(fpureConstr [e| x |] fConstr)
+            f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
+        |]
+    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FApplicative $(mkS fTyName tyVarNames) where
+            fpure x = $(fpureConstr [e| x |] fConstr)
+            f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
+        |]
+    BothDecs source generated ->
+      fail $ "makeFApplicativeInstance is not implemented for " ++ show source ++
+        " and " ++ show generated
+  where
+    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
+    fpureConstrExpr :: ExpQ -> Name -> Int -> ExpQ
+    fpureConstrExpr valExp constrName constrArity =
+      conE constrName `appEs` replicate constrArity valExp
+    fpureConstr :: ExpQ -> Con -> ExpQ
+    fpureConstr valExp constr =
+      case constr of
+        NormalC fConName fArgTypes ->
+          fpureConstrExpr valExp fConName (length fArgTypes)
+        RecC fConName fArgTypes ->
+          fpureConstrExpr valExp fConName (length fArgTypes)
+        _ -> fail $ "fpureConstr does not support " ++ show constr
+    fapConstrExpr :: ExpQ -> ExpQ -> Name -> Int -> ExpQ
+    fapConstrExpr funRecExpr argRecExpr constrName constrArity = do
+      let makeArgs prefix =
+            mapM (\i -> newName (prefix ++ show i)) [1..constrArity]
+      funArgNames <- makeArgs "f"
+      argArgNames <- makeArgs "x"
+      let funPat = conP constrName (map varP funArgNames)
+          argPat = conP constrName (map varP argArgNames)
+          applyComponent funName argName =
+            [e| $(varE funName) $$ $(varE argName) |]
+      destructure funRecExpr funPat $
+        destructure argRecExpr argPat $
+        conE constrName `appEs` zipWith applyComponent funArgNames argArgNames
+    fapConstr :: ExpQ -> ExpQ -> Con -> ExpQ
+    fapConstr funRecExpr argRecExpr constr =
+      case constr of
+        NormalC fConName fArgTypes ->
+          fapConstrExpr funRecExpr argRecExpr fConName (length fArgTypes)
+        RecC fConName fArgTypes ->
+          fapConstrExpr funRecExpr argRecExpr fConName (length fArgTypes)
+        _ -> fail $ "fapConstr does not support " ++ show constr
+        
+    
+        
+    {-
+    ftraverseMatch :: Name -> Name -> Int -> MatchQ
+    ftraverseMatch funName constrName constrArity = do
+      argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
+      let pat = conP constrName (map varP argNames)
+          mapArg v = [e| unCompose ($(varE funName) $(varE v)) |]
+          body = conE constrName `liftAppEs` map mapArg argNames
+      match pat (normalB body) []
+    ftraverseConstrCase :: Name -> Con -> MatchQ
+    ftraverseConstrCase funName constr =
+      case constr of
+        NormalC fConName fArgTypes ->
+          ftraverseMatch funName fConName (length fArgTypes)
+        RecC fConName fArgTypes ->
+          ftraverseMatch funName fConName (length fArgTypes)
+        _ -> fail $ "ftraverseConstrCase does not support " ++ show constr
+    -}
+
+-- | Generates `case $val of { $pat -> $exp }`
+destructure :: ExpQ -> PatQ -> ExpQ -> ExpQ
+destructure val pat expr = caseE val [match pat (normalB expr) []]
+
+-- | Generates `f arg1 ... argn`
+appEs :: ExpQ -> [ExpQ] -> ExpQ
+appEs = foldl appE
+
+-- | Generates `f <*> arg1 <*> ... <*> argn`
+apAppEs :: ExpQ -> [ExpQ] -> ExpQ
+apAppEs = foldl (\g y -> [e| $g <*> $y |])
+
+-- | Generates `f <$> arg1 <*> ... <*> argn`
+liftAppEs :: ExpQ -> [ExpQ] -> ExpQ
+liftAppEs x args =
+  case args of
+    [] -> [e| pure $x |]
+    firstArg:nextArgs -> apAppEs [e| $x <$> $firstArg |] nextArgs
 
 -- | Extract the name from a TyVarBndr.
 nameFromTyVarBndr :: TyVarBndr -> Name
