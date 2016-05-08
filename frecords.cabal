@@ -19,11 +19,13 @@ library
     FRecords,
     FRecords.Classes,
     FRecords.Combinators,
-    FRecords.TH
+    FRecords.TH,
+    FRecords.Internal.TH.Helpers
   build-depends:
     base >= 4.7 && < 5,
     template-haskell,
-    transformers >= 0.3 && < 0.6
+    transformers >= 0.3 && < 0.6,
+    safe
   default-language:    Haskell2010
   ghc-options:         -Wall
 

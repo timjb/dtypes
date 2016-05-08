@@ -1,11 +1,15 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module FRecords.TH
   ( makeFRecord
   ) where
 
+import Safe (initMay)
+
 import FRecords.Classes
+import FRecords.Internal.TH.Helpers
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..), (<$>))
@@ -20,12 +24,11 @@ makeFRecord tyName = do
   case info of
     TyConI dec -> do
       genDec <- makeFRecordForDec dec
-      let bothDecs = BothDecs { sourceDec = dec, generatedDec = genDec }
-      ffunctorDecs <- makeFFunctorInstance bothDecs
-      ftraverseDecs <- makeFTraversableInstance bothDecs
+      ffunctorDecs <- makeFFunctorInstance genDec
+      ftraverseDecs <- makeFTraversableInstance genDec
       fapplicativeDecs <-
-          if canDeriveFApplicative bothDecs
-            then makeFApplicativeInstance bothDecs
+          if canDeriveFApplicative genDec
+            then makeFApplicativeInstance genDec
             else pure []
       pure $ [genDec] ++ ffunctorDecs ++ ftraverseDecs ++ fapplicativeDecs
     _ -> fail "makeFRecord: Expected type constructor name"
@@ -81,18 +84,20 @@ makeFConForCon functorTyVarName con =
       return (fFieldName fieldName, fFieldStrictness strictness, fFieldType ty)
     fFieldName = modifyName ("f" ++)
     fFieldType ty = (VarT functorTyVarName) `AppT` ty
+    #if MIN_VERSION_template_haskell(2,11,0)
+    fFieldStrictness strictness = _
+    #else
     fFieldStrictness strictness =
       case strictness of
         IsStrict -> IsStrict
         Unpacked -> IsStrict
         NotStrict -> NotStrict
+    #endif
 
-data BothDecs = BothDecs { sourceDec :: Dec, generatedDec :: Dec }
-
-makeFFunctorInstance :: BothDecs -> DecsQ
-makeFFunctorInstance bothDecs =
-  case bothDecs of
-    BothDecs (DataD _ _tyName tyVars _constrs _) (DataD _ fTyName _ fConstrs _) ->
+makeFFunctorInstance :: Dec -> DecsQ
+makeFFunctorInstance typeDec =
+  case typeDec of
+    DataD _ fTyName (initMay -> Just tyVars) fConstrs _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -100,7 +105,7 @@ makeFFunctorInstance bothDecs =
             ffmap f rec =
               $(caseE [e| rec |] (map (ffmapConstrCase 'f) fConstrs))
         |]
-    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -108,9 +113,7 @@ makeFFunctorInstance bothDecs =
             ffmap f rec =
               $(caseE [e| rec |] [ffmapConstrCase 'f fConstr])
         |]
-    BothDecs source generated ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
-        " and " ++ show generated
+    _ -> fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ffmapMatch :: Name -> Name -> Int -> MatchQ
@@ -128,10 +131,10 @@ makeFFunctorInstance bothDecs =
           ffmapMatch funName fConName (length fArgTypes)
         _ -> fail $ "ffmapConstrCase does not support " ++ show constr
 
-makeFTraversableInstance :: BothDecs -> DecsQ
-makeFTraversableInstance bothDecs =
-  case bothDecs of
-    BothDecs (DataD _ _tyName tyVars _constrs _) (DataD _ fTyName _ fConstrs _) ->
+makeFTraversableInstance :: Dec -> DecsQ
+makeFTraversableInstance typeDec =
+  case typeDec of
+    DataD _ fTyName (initMay -> Just tyVars) fConstrs _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -139,7 +142,7 @@ makeFTraversableInstance bothDecs =
             ftraverse f rec =
               $(caseE [e| rec |] (map (ftraverseConstrCase 'f) fConstrs))
         |]
-    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -147,9 +150,7 @@ makeFTraversableInstance bothDecs =
             ftraverse f rec =
               $(caseE [e| rec |] [ftraverseConstrCase 'f fConstr])
         |]
-    BothDecs source generated ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show source ++
-        " and " ++ show generated
+    _ -> fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ftraverseMatch :: Name -> Name -> Int -> MatchQ
@@ -168,17 +169,17 @@ makeFTraversableInstance bothDecs =
           ftraverseMatch funName fConName (length fArgTypes)
         _ -> fail $ "ftraverseConstrCase does not support " ++ show constr
 
-canDeriveFApplicative :: BothDecs -> Bool
-canDeriveFApplicative bothDecs =
-  case generatedDec bothDecs of
+canDeriveFApplicative :: Dec -> Bool
+canDeriveFApplicative typeDec =
+  case typeDec of
     NewtypeD _ _ _ _ _ -> True
     DataD _ _ _ [_constr] _ -> True
     _ -> False
 
-makeFApplicativeInstance :: BothDecs -> DecsQ
-makeFApplicativeInstance bothDecs =
-  case bothDecs of
-    BothDecs (DataD _ _tyName tyVars [_constr] _) (DataD _ fTyName _ [fConstr] _) ->
+makeFApplicativeInstance :: Dec -> DecsQ
+makeFApplicativeInstance typeDec =
+  case typeDec of
+    DataD _ fTyName (initMay -> Just tyVars) [fConstr] _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -186,7 +187,7 @@ makeFApplicativeInstance bothDecs =
             fpure x = $(fpureConstr [e| x |] fConstr)
             f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
         |]
-    BothDecs (NewtypeD _ _tyName tyVars _constr _) (NewtypeD _ fTyName _ fConstr _) ->
+    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
@@ -194,9 +195,8 @@ makeFApplicativeInstance bothDecs =
             fpure x = $(fpureConstr [e| x |] fConstr)
             f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
         |]
-    BothDecs source generated ->
-      fail $ "makeFApplicativeInstance is not implemented for " ++ show source ++
-        " and " ++ show generated
+    _ ->
+      fail $ "makeFApplicativeInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     fpureConstrExpr :: ExpQ -> Name -> Int -> ExpQ
@@ -231,33 +231,3 @@ makeFApplicativeInstance bothDecs =
         RecC fConName fArgTypes ->
           fapConstrExpr funRecExpr argRecExpr fConName (length fArgTypes)
         _ -> fail $ "fapConstr does not support " ++ show constr
-
--- | Generates `case $val of { $pat -> $exp }`
-destructure :: ExpQ -> PatQ -> ExpQ -> ExpQ
-destructure val pat expr = caseE val [match pat (normalB expr) []]
-
--- | Generates `f arg1 ... argn`
-appEs :: ExpQ -> [ExpQ] -> ExpQ
-appEs = foldl appE
-
--- | Generates `f <*> arg1 <*> ... <*> argn`
-apAppEs :: ExpQ -> [ExpQ] -> ExpQ
-apAppEs = foldl (\g y -> [e| $g <*> $y |])
-
--- | Generates `f <$> arg1 <*> ... <*> argn`
-liftAppEs :: ExpQ -> [ExpQ] -> ExpQ
-liftAppEs x args =
-  case args of
-    [] -> [e| pure $x |]
-    firstArg:nextArgs -> apAppEs [e| $x <$> $firstArg |] nextArgs
-
--- | Extract the name from a TyVarBndr.
-nameFromTyVarBndr :: TyVarBndr -> Name
-nameFromTyVarBndr bndr =
-  case bndr of
-    PlainTV name -> name
-    KindedTV name _kind -> name
-
--- | Apply arguments to a type constructor.
-conAppsT :: Name -> [Type] -> Type
-conAppsT conName = foldl AppT (ConT conName)
