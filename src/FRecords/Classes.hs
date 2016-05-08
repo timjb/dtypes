@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
@@ -21,7 +22,12 @@ module FRecords.Classes
 
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Compose (Compose (..))
+#if MIN_VERSION_base(4,8,0)
 import Control.Applicative (liftA2)
+#else
+import Control.Applicative (Applicative (..), (<$>), liftA2)
+import Data.Traversable (Traversable (..))
+#endif
 
 -- TODO: instance for Const
 

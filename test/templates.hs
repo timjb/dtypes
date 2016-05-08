@@ -9,7 +9,7 @@ module Main (main) where
 import FRecords.Classes
 import FRecords.TH
 
-import Control.Applicative (Const (..))
+import Control.Applicative
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity (..))
 

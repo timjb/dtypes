@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module FRecords.TH
@@ -5,6 +6,10 @@ module FRecords.TH
   ) where
 
 import FRecords.Classes
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (Applicative (..), (<$>))
+#endif
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax

@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE PolyKinds #-}
 
 module FRecords.Combinators
@@ -5,6 +6,10 @@ module FRecords.Combinators
   , FProd (..)
   , FSum (..)
   ) where
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ((<*>), (<$>))
+#endif
 
 import FRecords.Classes
 
