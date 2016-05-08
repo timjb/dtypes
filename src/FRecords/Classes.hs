@@ -20,6 +20,7 @@ module FRecords.Classes
   ) where
 
 import Data.Functor.Identity (Identity (..))
+import Data.Functor.Compose (Compose (..))
 import Control.Applicative (liftA2)
 
 -- TODO: instance for Const
@@ -203,9 +204,6 @@ recToList
 recToList = recFoldMap (pure . getConst)
 -}
 
--- TODO: import from the Kmettiverse
-newtype Compose f g a = Compose { unCompose :: f (g a) }
-
 -- TODO: find a new name
 newtype ModifiedRec rec f g = ModifiedRec { unModifiedRec :: rec (Compose f g) }
 
@@ -222,7 +220,7 @@ instance (FTraversable rec, Traversable f) => FTraversable (ModifiedRec rec f) w
   fsequenceA (ModifiedRec x) = fmap ModifiedRec (ftraverse composeSequenceA x)
     where
       composeSequenceA (Compose y) =
-        Compose (fmap Compose (sequenceA (fmap unCompose y)))
+        Compose (fmap Compose (sequenceA (fmap getCompose y)))
 
 newtype FlipModifiedRec rec f g = FlipModifiedRec { unFlipModifiedRec :: rec (Compose g f) }
 

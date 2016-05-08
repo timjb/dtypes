@@ -151,7 +151,7 @@ makeFTraversableInstance bothDecs =
     ftraverseMatch funName constrName constrArity = do
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
       let pat = conP constrName (map varP argNames)
-          mapArg v = [e| unCompose ($(varE funName) $(varE v)) |]
+          mapArg v = [e| getCompose ($(varE funName) $(varE v)) |]
           body = conE constrName `liftAppEs` map mapArg argNames
       match pat (normalB body) []
     ftraverseConstrCase :: Name -> Con -> MatchQ
@@ -226,26 +226,6 @@ makeFApplicativeInstance bothDecs =
         RecC fConName fArgTypes ->
           fapConstrExpr funRecExpr argRecExpr fConName (length fArgTypes)
         _ -> fail $ "fapConstr does not support " ++ show constr
-        
-    
-        
-    {-
-    ftraverseMatch :: Name -> Name -> Int -> MatchQ
-    ftraverseMatch funName constrName constrArity = do
-      argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
-      let pat = conP constrName (map varP argNames)
-          mapArg v = [e| unCompose ($(varE funName) $(varE v)) |]
-          body = conE constrName `liftAppEs` map mapArg argNames
-      match pat (normalB body) []
-    ftraverseConstrCase :: Name -> Con -> MatchQ
-    ftraverseConstrCase funName constr =
-      case constr of
-        NormalC fConName fArgTypes ->
-          ftraverseMatch funName fConName (length fArgTypes)
-        RecC fConName fArgTypes ->
-          ftraverseMatch funName fConName (length fArgTypes)
-        _ -> fail $ "ftraverseConstrCase does not support " ++ show constr
-    -}
 
 -- | Generates `case $val of { $pat -> $exp }`
 destructure :: ExpQ -> PatQ -> ExpQ -> ExpQ
