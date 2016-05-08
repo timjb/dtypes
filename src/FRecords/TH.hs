@@ -41,20 +41,36 @@ modifyName f name =
 makeFRecordForDec :: Dec -> DecQ
 makeFRecordForDec dec =
   case dec of
+#if MIN_VERSION_template_haskell(2,11,0)
+    DataD ctx tyName tyVars _kind constrs _deriving -> do
+#else
     DataD ctx tyName tyVars constrs _deriving -> do
+#endif
       (functorTyVarName, functorTyVarBndr) <- functorTyVar
       let fCtx = ctx
           fTyName = modifyName ("F" ++) tyName
           fTyVars = tyVars ++ [functorTyVarBndr]
       fConstrs <- mapM (makeFConForCon functorTyVarName) constrs
+#if MIN_VERSION_template_haskell(2,11,0)
+      return (DataD fCtx fTyName fTyVars Nothing fConstrs fDeriving)
+#else
       return (DataD fCtx fTyName fTyVars fConstrs fDeriving)
+#endif
+#if MIN_VERSION_template_haskell(2,11,0)
+    NewtypeD ctx tyName tyVars _ constr _deriving -> do
+#else
     NewtypeD ctx tyName tyVars constr _deriving -> do
+#endif
       (functorTyVarName, functorTyVarBndr) <- functorTyVar
       let fCtx = ctx
           fTyName = modifyName ("F" ++) tyName
           fTyVars = tyVars ++ [functorTyVarBndr]
       fConstr <- makeFConForCon functorTyVarName constr
+#if MIN_VERSION_template_haskell(2,11,0)
+      return (NewtypeD fCtx fTyName fTyVars Nothing fConstr fDeriving)
+#else
       return (NewtypeD fCtx fTyName fTyVars fConstr fDeriving)
+#endif
     _ -> fail $ "makeFRecord not implemented for " ++ show dec
   where
     fDeriving = []
@@ -84,34 +100,63 @@ makeFConForCon functorTyVarName con =
       return (fFieldName fieldName, fFieldStrictness strictness, fFieldType ty)
     fFieldName = modifyName ("f" ++)
     fFieldType ty = (VarT functorTyVarName) `AppT` ty
-    #if MIN_VERSION_template_haskell(2,11,0)
-    fFieldStrictness strictness = _
-    #else
+#if MIN_VERSION_template_haskell(2,11,0)
+    fFieldStrictness :: Bang -> Bang
+    fFieldStrictness (Bang _unpackedness sourceStrictness) =
+      Bang NoSourceUnpackedness sourceStrictness
+#else
+    fFieldStrictness :: Strict -> Strict
     fFieldStrictness strictness =
       case strictness of
         IsStrict -> IsStrict
         Unpacked -> IsStrict
         NotStrict -> NotStrict
-    #endif
+#endif
+
+data SimpleTypeDecInfo
+  = SimpleTypeDecInfo
+  { stdi_typeName :: Name
+  , stdi_typeArgs :: [TyVarBndr]
+  , stdi_constrs :: [Con]
+  }
+
+getSimpleTypeDecInfo :: Dec -> Maybe SimpleTypeDecInfo
+getSimpleTypeDecInfo typeDec =
+  case typeDec of
+#if MIN_VERSION_template_haskell(2,11,0)
+    DataD _ tyName tyVarBndrs _ tyConstrs _ ->
+#else
+    DataD _ tyName tyVarBndrs tyConstrs _ ->
+#endif
+      Just $
+        SimpleTypeDecInfo
+        { stdi_typeName = tyName
+        , stdi_typeArgs = tyVarBndrs
+        , stdi_constrs = tyConstrs
+        }
+#if MIN_VERSION_template_haskell(2,11,0)
+    NewtypeD _ tyName tyVarBndrs _ tyConstr _ ->
+#else
+    NewtypeD _ tyName tyVarBndrs tyConstr _ ->
+#endif
+      Just $
+        SimpleTypeDecInfo
+        { stdi_typeName = tyName
+        , stdi_typeArgs = tyVarBndrs
+        , stdi_constrs = [tyConstr]
+        }
+    _ -> Nothing
 
 makeFFunctorInstance :: Dec -> DecsQ
 makeFFunctorInstance typeDec =
-  case typeDec of
-    DataD _ fTyName (initMay -> Just tyVars) fConstrs _ ->
+  case getSimpleTypeDecInfo typeDec of
+    Just (SimpleTypeDecInfo fTyName (initMay -> Just tyVars) fConstrs) ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
           instance FFunctor $(mkS fTyName tyVarNames) where
             ffmap f rec =
               $(caseE [e| rec |] (map (ffmapConstrCase 'f) fConstrs))
-        |]
-    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
-      let tyVarNames = map nameFromTyVarBndr tyVars
-      in
-        [d|
-          instance FFunctor $(mkS fTyName tyVarNames) where
-            ffmap f rec =
-              $(caseE [e| rec |] [ffmapConstrCase 'f fConstr])
         |]
     _ -> fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
   where
@@ -133,22 +178,14 @@ makeFFunctorInstance typeDec =
 
 makeFTraversableInstance :: Dec -> DecsQ
 makeFTraversableInstance typeDec =
-  case typeDec of
-    DataD _ fTyName (initMay -> Just tyVars) fConstrs _ ->
+  case getSimpleTypeDecInfo typeDec of
+    Just (SimpleTypeDecInfo fTyName (initMay -> Just tyVars) fConstrs) ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
           instance FTraversable $(mkS fTyName tyVarNames) where
             ftraverse f rec =
               $(caseE [e| rec |] (map (ftraverseConstrCase 'f) fConstrs))
-        |]
-    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
-      let tyVarNames = map nameFromTyVarBndr tyVars
-      in
-        [d|
-          instance FTraversable $(mkS fTyName tyVarNames) where
-            ftraverse f rec =
-              $(caseE [e| rec |] [ftraverseConstrCase 'f fConstr])
         |]
     _ -> fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
   where
@@ -171,23 +208,22 @@ makeFTraversableInstance typeDec =
 
 canDeriveFApplicative :: Dec -> Bool
 canDeriveFApplicative typeDec =
+#if MIN_VERSION_template_haskell(2,11,0)
+  case typeDec of
+    NewtypeD _ _ _ _ _ _ -> True
+    DataD _ _ _ _ [_constr] _ -> True
+    _ -> False
+#else
   case typeDec of
     NewtypeD _ _ _ _ _ -> True
     DataD _ _ _ [_constr] _ -> True
     _ -> False
+#endif
 
 makeFApplicativeInstance :: Dec -> DecsQ
 makeFApplicativeInstance typeDec =
-  case typeDec of
-    DataD _ fTyName (initMay -> Just tyVars) [fConstr] _ ->
-      let tyVarNames = map nameFromTyVarBndr tyVars
-      in
-        [d|
-          instance FApplicative $(mkS fTyName tyVarNames) where
-            fpure x = $(fpureConstr [e| x |] fConstr)
-            f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
-        |]
-    NewtypeD _ fTyName (initMay -> Just tyVars) fConstr _ ->
+  case getSimpleTypeDecInfo typeDec of
+    Just (SimpleTypeDecInfo fTyName (initMay -> Just tyVars) [fConstr]) ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|

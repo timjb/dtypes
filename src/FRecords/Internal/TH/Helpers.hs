@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module FRecords.Internal.TH.Helpers
@@ -8,6 +9,10 @@ module FRecords.Internal.TH.Helpers
   , nameFromTyVarBndr
   , conAppsT
   ) where
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative (Applicative (..), (<$>))
+#endif
 
 import Language.Haskell.TH
 
