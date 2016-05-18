@@ -1,8 +1,9 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
 
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Main (main) where
 
@@ -40,6 +41,14 @@ data Person
   { personName :: String
   , personAge :: Int
   , personHomepage :: Url
+  } deriving (Eq, Show)
+
+me :: Person
+me =
+  Person
+  { personName = "Tim Baumann"
+  , personAge = 21
+  , personHomepage = Url "http://timbaumann.info/"
   }
 
 makeFRecord ''Person
@@ -88,6 +97,8 @@ test_maybeParsedMe = do
   assertEqual (fpersonName <$> maybeParsedMe) (Just $ Identity "Tim Baumann")
   assertEqual (fpersonAge <$> maybeParsedMe) (Just $ Identity 21)
   assertEqual (fpersonHomepage <$> maybeParsedMe) (Just $ Identity (Url "http://timbaumann.info/"))
+
+test_osiiso = assertEqual (fosi (fiso me)) me
 
 main :: IO ()
 main = htfMain htf_thisModulesTests

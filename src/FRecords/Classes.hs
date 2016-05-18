@@ -2,6 +2,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module FRecords.Classes
   ( Trafo
@@ -18,6 +19,7 @@ module FRecords.Classes
   , Compose (..) -- TODO
   , ModifiedRec (..)
   , FlipModifiedRec (..)
+  , HasFType (..)
   ) where
 
 import Data.Functor.Identity (Identity (..))
@@ -214,8 +216,8 @@ recToList = recFoldMap (pure . getConst)
 newtype ModifiedRec rec f g = ModifiedRec { unModifiedRec :: rec (Compose f g) }
 
 instance (FFunctor rec, Functor f) => FFunctor (ModifiedRec rec f) where
-  ffmap f (ModifiedRec x) = ModifiedRec (composeMap <<$>> x)
-    where composeMap (Compose y) = Compose (fmap f y)
+  ffmap f = ModifiedRec . (composeMap f <<$>>) . unModifiedRec
+    where composeMap f' = Compose . (f' <$>) . getCompose
       
 instance (FApplicative rec, Applicative f) => FApplicative (ModifiedRec rec f) where
   fpure x = ModifiedRec (fpure (Compose (pure x)))
@@ -231,8 +233,8 @@ instance (FTraversable rec, Traversable f) => FTraversable (ModifiedRec rec f) w
 newtype FlipModifiedRec rec f g = FlipModifiedRec { unFlipModifiedRec :: rec (Compose g f) }
 
 instance FFunctor rec => FFunctor (FlipModifiedRec rec f) where
-  ffmap f (FlipModifiedRec x) = FlipModifiedRec (ffmap composeMap x)
-    where composeMap (Compose y) = Compose (f y)
+  ffmap f = FlipModifiedRec . (composeMap f <<$>>) . unFlipModifiedRec
+    where composeMap f' = Compose . f' . getCompose
 
 instance FApplicative rec => FApplicative (FlipModifiedRec rec f) where
   fpure x = FlipModifiedRec (fpure (Compose x))
@@ -245,3 +247,8 @@ instance FTraversable rec => FTraversable (FlipModifiedRec rec f) where
     where
       assoc :: Functor f => Compose (Compose f g) h a -> Compose f (Compose g h) a
       assoc (Compose (Compose y)) = Compose (fmap Compose y) -- TODO: optimize
+
+class HasFType t where
+  type FType t :: (* -> *) -> *
+  fiso :: t -> FType t Identity
+  fosi :: FType t Identity -> t
