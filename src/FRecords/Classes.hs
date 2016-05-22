@@ -15,6 +15,8 @@ module FRecords.Classes
   , FApplicative (..)
   , fpureTrafo
   , liftFA1, liftFA2, liftFA3, liftFA4, liftFA5, liftFA6, liftFA7, liftFA8
+  , (:+:) (..)
+  , FChoice (..)
   , FTraversable (..)
   , Compose (..) -- TODO
   , ModifiedRec (..)
@@ -182,6 +184,12 @@ liftFA8
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m -> r n
 liftFA8 f s t u v w x y z =
   (wrap7 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y <<*>> z
+
+-- TODO: import
+data (:+:) f g a = LeftF (f a) | RightF (g a)
+
+class FFunctor rec => FChoice (rec :: (k -> *) -> *) where
+  fchoose :: (rec f -> c) -> (rec g -> c) -> rec (f :+: g) -> c
 
 class FFunctor rec => FTraversable (rec :: (* -> *) -> *) where
   {-# MINIMAL ftraverse | fsequenceA #-}

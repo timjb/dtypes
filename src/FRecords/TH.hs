@@ -39,8 +39,14 @@ makeFRecord tyName = do
           if canDeriveFApplicative genType
             then makeFApplicativeInstance genType
             else pure []
+      fchoiceDecs <-
+          if canDeriveFChoice genType
+            then makeFChoiceInstance genType
+            else pure []
       hasFTypeDecs <- makeHasFTypeInstance origType genType
-      pure $ [genDec] ++ ffunctorDecs ++ ftraverseDecs ++ fapplicativeDecs ++ hasFTypeDecs
+      pure $
+        [genDec] ++ ffunctorDecs ++ ftraverseDecs ++
+        fapplicativeDecs ++ fchoiceDecs ++ hasFTypeDecs
     _ -> fail "makeFRecord: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
@@ -259,6 +265,50 @@ makeFApplicativeInstance genType =
       destructure funRecExpr funPat $
         destructure argRecExpr argPat $
         conE fConstrName `appEs` zipWith applyComponent funArgNames argArgNames
+
+isSumType :: SimpleTypeInfo -> Bool
+isSumType typeInfo =
+  all hasOneArgument (stdi_constrs typeInfo)
+  where
+    hasOneArgument constr = sci_numArgs constr == 1
+
+canDeriveFChoice :: SimpleTypeInfo -> Bool
+canDeriveFChoice = isSumType
+
+makeFChoiceInstance :: SimpleTypeInfo -> DecsQ
+makeFChoiceInstance genType =
+  case genType of
+    SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
+      let tyVarNames = map nameFromTyVarBndr tyVars
+      in
+        [d|
+          instance FChoice $(mkS fTyName tyVarNames) where
+            fchoose leftCases rightCases val =
+              $(caseE [e| val |] (map (fchooseConstr [e| leftCases |] [e| rightCases |]) fConstrs))
+        |]
+    _ ->
+      fail $ "makeFChoiceInstance is not implemented for " ++ show genType
+  where
+    mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
+    fchooseConstr :: ExpQ -> ExpQ -> SimpleConstrInfo -> MatchQ
+    fchooseConstr leftCasesE rightCasesE simpleConstrInfo =
+      case simpleConstrInfo of
+        SimpleConstrInfo { sci_name = fConstrName, sci_numArgs = 1 } -> do
+          argName <- newName "x"
+          let pat = conP fConstrName [varP argName]
+              body =
+                [e|
+                  case $(varE argName) of
+                    LeftF l ->
+                      $(leftCasesE) ($(conE fConstrName) l)
+                    RightF r ->
+                      $(rightCasesE) ($(conE fConstrName) r)
+                |]
+          match pat (normalB body) []
+        _ ->
+          fail $
+            "fchoicConstr not implemented for constructor with " ++
+            show (sci_numArgs simpleConstrInfo) ++ " arguments"
 
 makeHasFTypeInstance
   :: SimpleTypeInfo -- ^ the original datatype

@@ -100,5 +100,26 @@ test_maybeParsedMe = do
 
 test_osiiso = assertEqual (fosi (fiso me)) me
 
+data SumType
+  = MkInt Int
+  | MkString String
+
+makeFRecord ''SumType
+
+test_fchoose = do
+  assertEqual (fchoose handleConstString handleShow intConstString) "zweiundvierzig"
+  assertEqual (fchoose handleConstString handleShow stringIdentity) "\"Hallo\""
+  where
+    handleConstString x =
+      case x of
+        FMkInt (Const s) -> s
+        FMkString (Const s) -> s
+    handleShow x =
+      case x of
+        FMkInt (Identity i) -> show i
+        FMkString (Identity s) -> show s
+    intConstString = FMkInt (LeftF (Const "zweiundvierzig"))
+    stringIdentity = FMkString (RightF (Identity "Hallo"))
+
 main :: IO ()
 main = htfMain htf_thisModulesTests
