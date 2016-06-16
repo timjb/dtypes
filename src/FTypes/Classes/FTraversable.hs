@@ -7,6 +7,7 @@ module FTypes.Classes.FTraversable
   ( FTraversable (..)
   , ftraverse'
   , fsequenceA'
+  , ftoList
   ) where
 
 import FTypes.Classes.FFunctor
@@ -14,8 +15,10 @@ import FTypes.Compose
 import FTypes.Trafo
 
 import Data.Functor.Identity (Identity (..))
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative (Applicative (..), (<$>))
+#if MIN_VERSION_base(4,8,0)
+import Control.Applicative (Const (..))
+#else
+import Control.Applicative (Applicative (..), (<$>), Const (..))
 #endif
 
 class FFunctor r => FTraversable (r :: (k -> *) -> *) where
@@ -31,6 +34,9 @@ ftraverse' f = ftraverse (Compose . fmap Identity . f)
 
 fsequenceA' :: (FTraversable r, Applicative f) => r f -> f (r Identity)
 fsequenceA' = fsequenceA . ffmap (Compose . fmap Identity)
+
+ftoList :: FTraversable rec => rec (Const a) -> [a]
+ftoList = getConst . ftraverse' (Const . (:[]) . getConst) -- robot monkey!
 
 {-
 recFoldMap
