@@ -12,6 +12,8 @@ import Control.Applicative ((<*>), (<$>))
 #endif
 
 import FTypes.Classes
+import FTypes.Compose
+import FTypes.Trafo
 
 newtype FApply (x :: k) (f :: k -> *) = FApply { unFApply :: f x }
 
@@ -48,5 +50,3 @@ instance (FFunctor r, FFunctor s) => FFunctor (FSum r s) where
 instance (FTraversable r, FTraversable s) => FTraversable (FSum r s) where
   fsequenceA (FSum1 x) = FSum1 <$> fsequenceA x
   fsequenceA (FSum2 y) = FSum2 <$> fsequenceA y
-
--- TODO: something like FFix possible?

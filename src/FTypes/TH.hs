@@ -10,7 +10,9 @@ import Safe (initMay)
 
 import Data.Functor.Identity (Identity (..))
 import FTypes.Classes
+import FTypes.Compose
 import FTypes.Internal.TH.Helpers
+import FTypes.Trafo
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..), (<$>))

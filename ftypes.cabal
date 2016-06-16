@@ -19,8 +19,17 @@ library
   exposed-modules:
     FTypes,
     FTypes.Classes,
+    FTypes.Classes.FApplicative,
+    FTypes.Classes.FChoice,
+    FTypes.Classes.FFunctor,
+    FTypes.Classes.FTraversable,
+    FTypes.Classes.HasFType,
     FTypes.Combinators,
+    FTypes.Compose,
+    FTypes.Precompose,
+    FTypes.Postcompose,
     FTypes.TH,
+    FTypes.Trafo,
     FTypes.Internal.TH.Helpers
   build-depends:
     base >= 4.7 && < 5,
