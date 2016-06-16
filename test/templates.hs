@@ -93,7 +93,7 @@ personFormatDesc =
   }
 
 maybeParsedMe :: Maybe (FPerson Identity)
-maybeParsedMe = fsequenceA' (liftFA2 parseField personFormatDesc unparsedMe)
+maybeParsedMe = fsequenceA' (fliftA2 parseField personFormatDesc unparsedMe)
 
 -- TODO: Use Iso to compare for equality
 test_maybeParsedMe = do

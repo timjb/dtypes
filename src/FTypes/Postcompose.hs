@@ -24,7 +24,7 @@ instance (FFunctor rec, Functor f) => FFunctor (Postcompose rec f) where
 
 instance (FApplicative rec, Applicative f) => FApplicative (Postcompose rec f) where
   fpure x = Postcompose (fpure (Compose (pure x)))
-  Postcompose f <<*>> Postcompose x = Postcompose (liftFA2 composeAp f x)
+  Postcompose f <<*>> Postcompose x = Postcompose (fliftA2 composeAp f x)
     where composeAp (Compose g) (Compose y) = Compose (liftA2 ($$) g y)
 
 instance (FTraversable rec, Traversable f) => FTraversable (Postcompose rec f) where

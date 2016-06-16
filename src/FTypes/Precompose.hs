@@ -23,7 +23,7 @@ instance FFunctor r => FFunctor (Precompose r f) where
 instance FApplicative r => FApplicative (Precompose r f) where
   fpure x = Precompose (fpure (Compose x))
   Precompose f <<*>> Precompose x =
-    Precompose (liftFA2 composeAp f x)
+    Precompose (fliftA2 composeAp f x)
     where composeAp (Compose g) (Compose y) = Compose (g $$ y)
 
 instance FTraversable r => FTraversable (Precompose r f) where

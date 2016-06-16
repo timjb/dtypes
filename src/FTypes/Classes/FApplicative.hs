@@ -6,7 +6,7 @@
 module FTypes.Classes.FApplicative
   ( FApplicative (..)
   , fpureTrafo
-  , liftFA1, liftFA2, liftFA3, liftFA4, liftFA5, liftFA6, liftFA7, liftFA8
+  , fliftA1, fliftA2, fliftA3, fliftA4, fliftA5, fliftA6, fliftA7, fliftA8
   ) where
 
 import FTypes.Classes.FFunctor
@@ -30,7 +30,7 @@ class FFunctor r => FApplicative (r :: (k -> *) -> *) where
   (*>>) :: r f -> r g -> r g
   s *>> t = (wrap1 id <<$ s) <<*>> t
   (<<*) :: r f -> r g -> r f
-  (<<*) = liftFA2 const
+  (<<*) = fliftA2 const
 
 fpureTrafo :: FApplicative r => (f ==> g) -> r (f ==>> g)
 fpureTrafo f = fpure (TrafoComp f)
@@ -70,53 +70,53 @@ wrap7
   -> (f ==>> g ==>> h ==>> i ==>> j ==>> k ==>> l ==>> m) a
 wrap7 f = TrafoComp (wrap6 <$> f)
 
-liftFA1
+fliftA1
   :: FFunctor r
   => (forall a. f a -> g a)
   -> r f -> r g
-liftFA1 = ffmap
+fliftA1 = ffmap
 
-liftFA2
+fliftA2
   :: FApplicative r
   => (forall a. f a -> g a -> h a)
   -> r f -> r g -> r h
-liftFA2 f s t = (wrap1 <$> f) <<$>> s <<*>> t
+fliftA2 f s t = (wrap1 <$> f) <<$>> s <<*>> t
 
-liftFA3
+fliftA3
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a)
   -> r f -> r g -> r h -> r i
-liftFA3 f s t u = (wrap2 <$> f) <<$>> s <<*>> t <<*>> u
+fliftA3 f s t u = (wrap2 <$> f) <<$>> s <<*>> t <<*>> u
 
-liftFA4
+fliftA4
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a)
   -> r f -> r g -> r h -> r i -> r j
-liftFA4 f s t u v = (wrap3 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v
+fliftA4 f s t u v = (wrap3 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v
 
-liftFA5
+fliftA5
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a)
   -> r f -> r g -> r h -> r i -> r j -> r k
-liftFA5 f s t u v w = (wrap4 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w
+fliftA5 f s t u v w = (wrap4 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w
 
-liftFA6
+fliftA6
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l
-liftFA6 f s t u v w x =
+fliftA6 f s t u v w x =
   (wrap5 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x
 
-liftFA7
+fliftA7
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m
-liftFA7 f s t u v w x y =
+fliftA7 f s t u v w x y =
   (wrap6 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y
 
-liftFA8
+fliftA8
   :: FApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a -> n a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m -> r n
-liftFA8 f s t u v w x y z =
+fliftA8 f s t u v w x y z =
   (wrap7 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y <<*>> z
