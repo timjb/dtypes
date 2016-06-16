@@ -283,15 +283,15 @@ makeFChoiceInstance genType =
       in
         [d|
           instance FChoice $(mkS fTyName tyVarNames) where
-            fchoose leftCases rightCases val =
-              $(caseE [e| val |] (map (fchooseConstr [e| leftCases |] [e| rightCases |]) fConstrs))
+            fchoose val =
+              $(caseE [e| val |] (map fchooseConstr fConstrs))
         |]
     _ ->
       fail $ "makeFChoiceInstance is not implemented for " ++ show genType
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    fchooseConstr :: ExpQ -> ExpQ -> SimpleConstrInfo -> MatchQ
-    fchooseConstr leftCasesE rightCasesE simpleConstrInfo =
+    fchooseConstr :: SimpleConstrInfo -> MatchQ
+    fchooseConstr simpleConstrInfo =
       case simpleConstrInfo of
         SimpleConstrInfo { sci_name = fConstrName, sci_numArgs = 1 } -> do
           argName <- newName "x"
@@ -300,14 +300,14 @@ makeFChoiceInstance genType =
                 [e|
                   case $(varE argName) of
                     LeftF l ->
-                      $(leftCasesE) ($(conE fConstrName) l)
+                      Left ($(conE fConstrName) l)
                     RightF r ->
-                      $(rightCasesE) ($(conE fConstrName) r)
+                      Right ($(conE fConstrName) r)
                 |]
           match pat (normalB body) []
         _ ->
           fail $
-            "fchoicConstr not implemented for constructor with " ++
+            "fchoiceConstr not implemented for constructor with " ++
             show (sci_numArgs simpleConstrInfo) ++ " arguments"
 
 makeHasFTypeInstance

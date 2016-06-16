@@ -1,9 +1,12 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
 
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Main (main) where
 
@@ -106,18 +109,16 @@ data SumType
 
 makeFRecord ''SumType
 
+deriving instance Eq (FSumType Identity)
+deriving instance Eq a => Eq (FSumType (Const a))
+deriving instance Show (FSumType Identity)
+deriving instance Show a => Show (FSumType (Const a))
+
 test_fchoose = do
-  assertEqual (fchoose handleConstString handleShow intConstString) "zweiundvierzig"
-  assertEqual (fchoose handleConstString handleShow stringIdentity) "\"Hallo\""
+  assertEqual (fchoose intConstString) (Left (FMkInt (Const "zweiundvierzig")))
+  assertEqual (fchoose stringIdentity) (Right (FMkString (Identity "Hallo")))
   where
-    handleConstString x =
-      case x of
-        FMkInt (Const s) -> s
-        FMkString (Const s) -> s
-    handleShow x =
-      case x of
-        FMkInt (Identity i) -> show i
-        FMkString (Identity s) -> show s
+    intConstString, stringIdentity :: FSumType (Const String :+: Identity)
     intConstString = FMkInt (LeftF (Const "zweiundvierzig"))
     stringIdentity = FMkString (RightF (Identity "Hallo"))
 

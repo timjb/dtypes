@@ -189,7 +189,7 @@ liftFA8 f s t u v w x y z =
 data (:+:) f g a = LeftF (f a) | RightF (g a)
 
 class FFunctor rec => FChoice (rec :: (k -> *) -> *) where
-  fchoose :: (rec f -> c) -> (rec g -> c) -> rec (f :+: g) -> c
+  fchoose :: rec (f :+: g) -> Either (rec f) (rec g)
 
 class FFunctor rec => FTraversable (rec :: (* -> *) -> *) where
   {-# MINIMAL ftraverse | fsequenceA #-}
