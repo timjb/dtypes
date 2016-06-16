@@ -1,4 +1,4 @@
-# frecords [![Build Status][travis-image]][travis-url]
+# ftypes [![Build Status][travis-image]][travis-url]
 
-[travis-image]: https://travis-ci.org/timjb/frecords.svg?branch=master
-[travis-url]: https://travis-ci.org/timjb/frecords
+[travis-image]: https://travis-ci.org/timjb/ftypes.svg?branch=master
+[travis-url]: https://travis-ci.org/timjb/ftypes
