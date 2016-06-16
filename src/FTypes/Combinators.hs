@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE PolyKinds #-}
 
-module FRecords.Combinators
+module FTypes.Combinators
   ( FApply (..)
   , FProd (..)
   , FSum (..)
@@ -11,7 +11,7 @@ module FRecords.Combinators
 import Control.Applicative ((<*>), (<$>))
 #endif
 
-import FRecords.Classes
+import FTypes.Classes
 
 newtype FApply (x :: k) (f :: k -> *) = FApply { unFApply :: f x }
 

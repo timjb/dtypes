@@ -2,15 +2,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module FRecords.TH
+module FTypes.TH
   ( makeFRecord
   ) where
 
 import Safe (initMay)
 
 import Data.Functor.Identity (Identity (..))
-import FRecords.Classes
-import FRecords.Internal.TH.Helpers
+import FTypes.Classes
+import FTypes.Internal.TH.Helpers
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..), (<$>))

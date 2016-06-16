@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module FRecords.Classes
+module FTypes.Classes
   ( Trafo
   --, (==>)
   , FFunctor (..)
@@ -226,12 +226,12 @@ newtype ModifiedRec rec f g = ModifiedRec { unModifiedRec :: rec (Compose f g) }
 instance (FFunctor rec, Functor f) => FFunctor (ModifiedRec rec f) where
   ffmap f = ModifiedRec . (composeMap f <<$>>) . unModifiedRec
     where composeMap f' = Compose . (f' <$>) . getCompose
-      
+
 instance (FApplicative rec, Applicative f) => FApplicative (ModifiedRec rec f) where
   fpure x = ModifiedRec (fpure (Compose (pure x)))
   ModifiedRec f <<*>> ModifiedRec x = ModifiedRec (liftFA2 composeAp f x)
     where composeAp (Compose g) (Compose y) = Compose (liftA2 ($$) g y)
-      
+
 instance (FTraversable rec, Traversable f) => FTraversable (ModifiedRec rec f) where
   fsequenceA (ModifiedRec x) = fmap ModifiedRec (ftraverse composeSequenceA x)
     where

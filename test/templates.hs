@@ -7,8 +7,8 @@
 
 module Main (main) where
 
-import FRecords.Classes
-import FRecords.TH
+import FTypes.Classes
+import FTypes.TH
 
 import Control.Applicative
 import Data.Foldable (toList)
