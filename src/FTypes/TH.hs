@@ -3,7 +3,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module FTypes.TH
-  ( makeFRecord
+  ( makeFType
   ) where
 
 import Safe (initMay)
@@ -21,12 +21,12 @@ import Control.Applicative (Applicative (..), (<$>))
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-makeFRecord :: Name -> DecsQ
-makeFRecord tyName = do
+makeFType :: Name -> DecsQ
+makeFType tyName = do
   info <- reify tyName
   case info of
     TyConI dec -> do
-      genDec <- makeFRecordForDec dec
+      genDec <- makeFTypeForDec dec
       origType <-
         case getSimpleTypeInfo dec of
           Just typeDecInfo -> return typeDecInfo
@@ -49,15 +49,15 @@ makeFRecord tyName = do
       pure $
         [genDec] ++ ffunctorDecs ++ ftraverseDecs ++
         fapplicativeDecs ++ fchoiceDecs ++ hasFTypeDecs
-    _ -> fail "makeFRecord: Expected type constructor name"
+    _ -> fail "makeFType: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
 modifyName f name =
   let Name (OccName str) flavour = name
   in Name (OccName (f str)) flavour
 
-makeFRecordForDec :: Dec -> DecQ
-makeFRecordForDec dec =
+makeFTypeForDec :: Dec -> DecQ
+makeFTypeForDec dec =
   case dec of
 #if MIN_VERSION_template_haskell(2,11,0)
     DataD ctx tyName tyVars _kind constrs _deriving -> do
@@ -89,7 +89,7 @@ makeFRecordForDec dec =
 #else
       return (NewtypeD fCtx fTyName fTyVars fConstr fDeriving)
 #endif
-    _ -> fail $ "makeFRecord not implemented for " ++ show dec
+    _ -> fail $ "makeFType not implemented for " ++ show dec
   where
     fDeriving = []
     functorTyVar = do

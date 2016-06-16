@@ -22,7 +22,7 @@ import Test.Framework
 
 data Foo a = Bar Int String | Blub () a
 
-makeFRecord ''Foo
+makeFType ''Foo
 
 ffoo1, ffoo2 :: FFoo Bool Maybe
 ffoo1 = FBar Nothing (Just "hallo")
@@ -30,7 +30,7 @@ ffoo2 = FBlub (Just ()) (Just True)
 
 newtype Url = Url { unUrl :: String } deriving (Eq, Show)
 
-makeFRecord ''Url
+makeFType ''Url
 
 maybeUrl1, maybeUrl2 :: FUrl Maybe
 maybeUrl1 = FUrl Nothing
@@ -54,7 +54,7 @@ me =
   , personHomepage = Url "http://timbaumann.info/"
   }
 
-makeFRecord ''Person
+makeFType ''Person
 
 unparsedMe :: FPerson (Const String)
 unparsedMe =
@@ -107,7 +107,7 @@ data SumType
   = MkInt Int
   | MkString String
 
-makeFRecord ''SumType
+makeFType ''SumType
 
 deriving instance Eq (FSumType Identity)
 deriving instance Eq a => Eq (FSumType (Const a))
