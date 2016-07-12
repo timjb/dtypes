@@ -22,6 +22,7 @@ library
     FTypes.Classes.FApplicative,
     FTypes.Classes.FChoice,
     FTypes.Classes.FFunctor,
+    FTypes.Classes.FMonad,
     FTypes.Classes.FTraversable,
     FTypes.Classes.HasFType,
     FTypes.Combinators,
