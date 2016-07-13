@@ -6,6 +6,7 @@
 module FTypes.Dual
   ( Elim (..)
   , Dual (..)
+  , pair, pairElimL, pairElimR
   ) where
 
 import FTypes.Classes
@@ -34,6 +35,22 @@ instance FFunctor rec => FFunctor (Dual rec) where
 
 dualInvolutionIso :: FFunctor rec => rec f -> Dual (Dual rec) f
 dualInvolutionIso val = Dual $ \(Dual f) -> f (elimInvolutionIso <<$>> val)
+
+pairElimR :: Dual r f -> r (Elim f x) -> x
+pairElimR = getDual
+
+pair
+  :: FFunctor r
+  => (forall a. f a -> g a -> x)
+  -> Dual r f
+  -> r g
+  -> x
+pair f d x =
+  pairElimR d (Elim . flip f <<$>> x)
+
+pairElimL :: FFunctor r => Dual r (Elim f x) -> r f -> x
+pairElimL =
+  pair getElim
 
 {-
 instance FDistributive rec => FChoice (Dual rec) where
