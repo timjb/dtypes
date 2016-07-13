@@ -7,3 +7,4 @@ import FTypes.Classes.FApplicative as X
 import FTypes.Classes.FTraversable as X
 import FTypes.Classes.FChoice as X
 import FTypes.Classes.HasFType as X
+import FTypes.Classes.HasDualFType as X

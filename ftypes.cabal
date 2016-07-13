@@ -23,6 +23,7 @@ library
     FTypes.Classes.FChoice,
     FTypes.Classes.FFunctor,
     FTypes.Classes.FTraversable,
+    FTypes.Classes.HasDualFType,
     FTypes.Classes.HasFType,
     FTypes.Combinators,
     FTypes.Compose,
