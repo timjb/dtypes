@@ -16,7 +16,9 @@ import Data.Traversable (Traversable (..))
 #endif
 
 newtype Postcompose r f g
-  = Postcompose { getPostcompose :: r (Compose f g) }
+  = Postcompose
+  { getPostcompose :: r (Compose f g)
+  }
 
 instance (FFunctor rec, Functor f) => FFunctor (Postcompose rec f) where
   ffmap f = Postcompose . (composeMap f <<$>>) . getPostcompose

@@ -1,21 +1,24 @@
-name:                ftypes
-version:             0.1.0.0
-synopsis:            Initial project template from stack
-description:         Please see README.md
-homepage:            https://github.com/timjb/ftypes#readme
-license:             MIT
-license-file:        LICENSE
-author:              Tim Baumann
-maintainer:          tim@timbaumann.info
-copyright:           MIT License
-category:            Data, Generics
-build-type:          Simple
+name: ftypes
+version: 0.1.0.0
+synopsis: Functors, Applicatives, Traversables etc. of kind (k -> *) -> *
+description: Please see README.md
+homepage: https://github.com/timjb/ftypes#readme
+license: MIT
+license-file: LICENSE
+author: Tim Baumann
+maintainer: tim@timbaumann.info
+copyright: MIT License
+category: Data, Generics
+build-type: Simple
 -- extra-source-files:
-cabal-version:       >=1.10
-tested-with:         GHC == 7.8.4, GHC == 7.10.2, GHC == 8.0.1
+cabal-version: >= 1.10
+tested-with:
+  GHC == 7.8.4,
+  GHC == 7.10.2,
+  GHC == 8.0.1
 
 library
-  hs-source-dirs:      src
+  hs-source-dirs: src
   exposed-modules:
     FTypes,
     FTypes.Classes,
@@ -36,13 +39,13 @@ library
     template-haskell,
     transformers >= 0.3 && < 0.6,
     safe
-  default-language:    Haskell2010
-  ghc-options:         -Wall
+  default-language: Haskell2010
+  ghc-options: -Wall
 
 test-suite ftypes-th
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             templates.hs
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: templates.hs
   build-depends:
     base,
     ftypes,
@@ -50,9 +53,9 @@ test-suite ftypes-th
     HTF,
     safe,
     transformers
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  default-language:    Haskell2010
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
 
 source-repository head
-  type:     git
-  location: https://github.com/timjb/frecords
+  type: git
+  location: https://github.com/timjb/ftypes

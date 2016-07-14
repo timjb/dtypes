@@ -1,7 +1,7 @@
 resolver: lts-6.3
 packages:
 - '.'
-- 'examples/ftypes-json'
+- 'examples/ftypes-aeson'
 - 'examples/ftypes-optparse-applicative'
 extra-deps: []
 flags: {}
