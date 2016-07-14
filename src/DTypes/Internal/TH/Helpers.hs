@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module FTypes.Internal.TH.Helpers
+module DTypes.Internal.TH.Helpers
   ( destructure
   , appEs
   , apAppEs

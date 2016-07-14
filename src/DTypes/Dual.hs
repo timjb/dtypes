@@ -3,15 +3,18 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 
-module FTypes.Dual
+module DTypes.Dual
   ( Elim (..)
   , Dual (..)
   , pair, pairElimL, pairElimR
   ) where
 
-import FTypes.Classes
+import DTypes.Classes
 
-newtype Elim f c a = Elim { unElim :: f a -> c }
+newtype Elim f c a
+  = Elim
+  { getElim :: f a -> c
+  }
 
 contraMapElim :: (f a -> g a) -> Elim g c a -> Elim f c a
 contraMapElim trafo (Elim elim) = Elim (elim . trafo)
@@ -28,27 +31,30 @@ combineElims (Elim leftElim) (Elim rightElim) =
     LeftF l -> leftElim l
     RightF r -> rightElim r
 
-newtype Dual rec f = Dual { unDual :: forall c. rec (Elim f c) -> c }
+newtype Dual rec f
+  = Dual
+  { getDual :: forall c. rec (Elim f c) -> c
+  }
 
-instance FFunctor rec => FFunctor (Dual rec) where
-  ffmap trafo (Dual elim) = Dual (\val -> elim (contraMapElim trafo <<$>> val))
+instance DFunctor rec => DFunctor (Dual rec) where
+  dfmap trafo (Dual elim) = Dual (\val -> elim (contraMapElim trafo <<$>> val))
 
-dualInvolutionIso :: FFunctor rec => rec f -> Dual (Dual rec) f
+dualInvolutionIso :: DFunctor d => d f -> Dual (Dual d) f
 dualInvolutionIso val = Dual $ \(Dual f) -> f (elimInvolutionIso <<$>> val)
 
-pairElimR :: Dual r f -> r (Elim f x) -> x
+pairElimR :: Dual d f -> d (Elim f x) -> x
 pairElimR = getDual
 
 pair
-  :: FFunctor r
+  :: DFunctor d
   => (forall a. f a -> g a -> x)
-  -> Dual r f
-  -> r g
+  -> Dual d f
+  -> d g
   -> x
 pair f d x =
   pairElimR d (Elim . flip f <<$>> x)
 
-pairElimL :: FFunctor r => Dual r (Elim f x) -> r f -> x
+pairElimL :: DFunctor d => Dual d (Elim f x) -> d f -> x
 pairElimL =
   pair getElim
 

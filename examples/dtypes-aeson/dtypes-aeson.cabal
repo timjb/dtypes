@@ -1,0 +1,22 @@
+name: dtypes-aeson
+version: 0.1.0.0
+synopsis: example for parsing JSON using aeson together with dtypes
+homepage: https://github.com/timjb/dtypes/tree/master/examples/dtypes-aeson
+license: MIT
+license-file: LICENSE
+author: Tim Baumann
+maintainer: tim@timbaumann.info
+build-type: Simple
+cabal-version: >= 1.10
+
+library
+  exposed-modules:
+    JSONFormat
+    GithubUser
+  build-depends:
+    base,
+    dtypes,
+    aeson,
+    text
+  hs-source-dirs: .
+  default-language: Haskell2010
