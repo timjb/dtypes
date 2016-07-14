@@ -7,9 +7,9 @@ module Main
   ) where
 
 import qualified Options.Applicative as OA
-import FTypes.TH (makeFType)
-import FTypes.Classes.FTraversable (fsequenceA')
-import FTypes.Classes.HasFType (HasFType (..))
+import DTypes.TH (makeDType)
+import DTypes.Classes.DTraversable (fsequenceA')
+import DTypes.Classes.HasDType (HasDType (..))
 
 -- adapted example from the optparse-applicative README
 
@@ -19,7 +19,7 @@ data Sample
   , quiet :: Bool
   }
 
-makeFType ''Sample
+makeDType ''Sample
 
 sample :: OA.Parser Sample
 sample =

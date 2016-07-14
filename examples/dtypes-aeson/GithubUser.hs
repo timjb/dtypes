@@ -7,7 +7,7 @@
 module GithubUser where
 
 import JSONFormat
-import FTypes
+import DTypes
 
 import Data.Aeson ((.=), (.:))
 import qualified Data.Aeson as A
@@ -66,7 +66,7 @@ instance A.FromJSON GithubUser where
 
 -}
 
-makeFType ''GithubUser
+makeDType ''GithubUser
 
 ghUserJSONFormat :: JSONFormat GithubUser
 ghUserJSONFormat =

@@ -1,7 +1,7 @@
-name: ftypes-aeson
+name: dtypes-aeson
 version: 0.1.0.0
-synopsis: example for parsing JSON using aeson together with ftypes
-homepage: https://github.com/timjb/ftypes/tree/master/examples/ftypes-aeson
+synopsis: example for parsing JSON using aeson together with dtypes
+homepage: https://github.com/timjb/dtypes/tree/master/examples/dtypes-aeson
 license: MIT
 license-file: LICENSE
 author: Tim Baumann
@@ -15,7 +15,7 @@ library
     GithubUser
   build-depends:
     base,
-    ftypes,
+    dtypes,
     aeson,
     text
   hs-source-dirs: .

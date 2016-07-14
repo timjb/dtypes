@@ -1,14 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE PolyKinds #-}
 
-module FTypes.Compose
+module DTypes.Compose
   ( Compose (..)
   ) where
 
 #if MIN_VERSION_base(4,8,0)
 import Control.Applicative (liftA2)
 #else
-import Control.Applicative (Applicative (..), liftA2)
+import Control.Applicative ((<$>), Applicative (..), liftA2)
 #endif
 
 -- `Compose` from `Data.Functor.Compose` is not good enough because it is not poly-kinded

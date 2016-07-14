@@ -3,15 +3,15 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Classes.FApplicative
-  ( FApplicative (..)
+module DTypes.Classes.DApplicative
+  ( DApplicative (..)
   , fpureTrafo
   , fliftA1, fliftA2, fliftA3, fliftA4, fliftA5, fliftA6, fliftA7, fliftA8
   ) where
 
-import FTypes.Classes.FFunctor
-import FTypes.Compose
-import FTypes.Trafo
+import DTypes.Classes.DFunctor
+import DTypes.Compose
+import DTypes.Trafo
 
 #if MIN_VERSION_base(4,8,0)
 import Control.Applicative (liftA2)
@@ -21,7 +21,7 @@ import Control.Applicative ((<$>), liftA2)
 
 infixl 4 <<*>>, <<*, *>>
 
-class FFunctor r => FApplicative (r :: (k -> *) -> *) where
+class DFunctor r => DApplicative (r :: (k -> *) -> *) where
   -- axioms (analog to applicative axioms):
   --   fpure idTrafo <<*>> r = r
   --   pureTrafo o <<*>> u <<*>> v <<*>> w = u <<*>> (v <<*>> w)
@@ -35,11 +35,11 @@ class FFunctor r => FApplicative (r :: (k -> *) -> *) where
   (<<*) :: r f -> r g -> r f
   (<<*) = fliftA2 const
 
-instance (Applicative f, FApplicative r) => FApplicative (Compose f r) where
+instance (Applicative f, DApplicative r) => DApplicative (Compose f r) where
   fpure x = Compose (pure (fpure x))
   Compose f <<*>> Compose x = Compose (liftA2 (<<*>>) f x)
 
-fpureTrafo :: FApplicative r => (f ==> g) -> r (f ==>> g)
+fpureTrafo :: DApplicative r => (f ==> g) -> r (f ==>> g)
 fpureTrafo f = fpure (TrafoComp f)
 
 wrap1
@@ -78,51 +78,51 @@ wrap7
 wrap7 f = TrafoComp (wrap6 <$> f)
 
 fliftA1
-  :: FFunctor r
+  :: DFunctor r
   => (forall a. f a -> g a)
   -> r f -> r g
 fliftA1 = ffmap
 
 fliftA2
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a)
   -> r f -> r g -> r h
 fliftA2 f s t = (wrap1 <$> f) <<$>> s <<*>> t
 
 fliftA3
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a)
   -> r f -> r g -> r h -> r i
 fliftA3 f s t u = (wrap2 <$> f) <<$>> s <<*>> t <<*>> u
 
 fliftA4
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a)
   -> r f -> r g -> r h -> r i -> r j
 fliftA4 f s t u v = (wrap3 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v
 
 fliftA5
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a)
   -> r f -> r g -> r h -> r i -> r j -> r k
 fliftA5 f s t u v w = (wrap4 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w
 
 fliftA6
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l
 fliftA6 f s t u v w x =
   (wrap5 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x
 
 fliftA7
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m
 fliftA7 f s t u v w x y =
   (wrap6 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y
 
 fliftA8
-  :: FApplicative r
+  :: DApplicative r
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a -> n a)
   -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m -> r n
 fliftA8 f s t u v w x y z =

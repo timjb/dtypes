@@ -2,17 +2,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module FTypes.TH
-  ( makeFType
+module DTypes.TH
+  ( makeDType
   ) where
 
 import Safe (initMay)
 
 import Data.Functor.Identity (Identity (..))
-import FTypes.Classes
-import FTypes.Compose
-import FTypes.Internal.TH.Helpers
-import FTypes.Trafo
+import DTypes.Classes
+import DTypes.Compose
+import DTypes.Internal.TH.Helpers
+import DTypes.Trafo
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..), (<$>))
@@ -21,12 +21,12 @@ import Control.Applicative (Applicative (..), (<$>))
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-makeFType :: Name -> DecsQ
-makeFType tyName = do
+makeDType :: Name -> DecsQ
+makeDType tyName = do
   info <- reify tyName
   case info of
     TyConI dec -> do
-      genDec <- makeFTypeForDec dec
+      genDec <- makeDTypeForDec dec
       origType <-
         case getSimpleTypeInfo dec of
           Just typeDecInfo -> return typeDecInfo
@@ -35,29 +35,29 @@ makeFType tyName = do
         case getSimpleTypeInfo genDec of
           Just typeDecInfo -> return typeDecInfo
           Nothing -> fail "could not get generated type dec info!"
-      ffunctorDecs <- makeFFunctorInstance genType
-      ftraverseDecs <- makeFTraversableInstance genType
+      ffunctorDecs <- makeDFunctorInstance genType
+      ftraverseDecs <- makeDTraversableInstance genType
       fapplicativeDecs <-
-          if canDeriveFApplicative genType
-            then makeFApplicativeInstance genType
+          if canDeriveDApplicative genType
+            then makeDApplicativeInstance genType
             else pure []
       fchoiceDecs <-
-          if canDeriveFChoice genType
-            then makeFChoiceInstance genType
+          if canDeriveDChoice genType
+            then makeDChoiceInstance genType
             else pure []
-      hasFTypeDecs <- makeHasFTypeInstance origType genType
+      hasDTypeDecs <- makeHasDTypeInstance origType genType
       pure $
         [genDec] ++ ffunctorDecs ++ ftraverseDecs ++
-        fapplicativeDecs ++ fchoiceDecs ++ hasFTypeDecs
-    _ -> fail "makeFType: Expected type constructor name"
+        fapplicativeDecs ++ fchoiceDecs ++ hasDTypeDecs
+    _ -> fail "makeDType: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
 modifyName f name =
   let Name (OccName str) flavour = name
   in Name (OccName (f str)) flavour
 
-makeFTypeForDec :: Dec -> DecQ
-makeFTypeForDec dec =
+makeDTypeForDec :: Dec -> DecQ
+makeDTypeForDec dec =
   case dec of
 #if MIN_VERSION_template_haskell(2,11,0)
     DataD ctx tyName tyVars _kind constrs _deriving -> do
@@ -89,7 +89,7 @@ makeFTypeForDec dec =
 #else
       return (NewtypeD fCtx fTyName fTyVars fConstr fDeriving)
 #endif
-    _ -> fail $ "makeFType not implemented for " ++ show dec
+    _ -> fail $ "makeDType not implemented for " ++ show dec
   where
     fDeriving = []
     functorTyVar = do
@@ -182,19 +182,19 @@ getSimpleTypeInfo typeDec =
         }
     _ -> Nothing
 
-makeFFunctorInstance :: SimpleTypeInfo -> DecsQ
-makeFFunctorInstance typeDec =
+makeDFunctorInstance :: SimpleTypeInfo -> DecsQ
+makeDFunctorInstance typeDec =
   case typeDec of
     SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FFunctor $(mkS fTyName tyVarNames) where
+          instance DFunctor $(mkS fTyName tyVarNames) where
             ffmap f rec =
               $(caseE [e| rec |] (map (ffmapConstrCase 'f) fConstrs))
         |]
     _ ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
+      fail $ "makeDFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ffmapConstrCase :: Name -> SimpleConstrInfo -> MatchQ
@@ -204,19 +204,19 @@ makeFFunctorInstance typeDec =
           body = conE fConstrName `appEs` map (\v -> varE funName `appE` varE v) argNames
       match pat (normalB body) []
 
-makeFTraversableInstance :: SimpleTypeInfo -> DecsQ
-makeFTraversableInstance typeDec =
+makeDTraversableInstance :: SimpleTypeInfo -> DecsQ
+makeDTraversableInstance typeDec =
   case typeDec of
     SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FTraversable $(mkS fTyName tyVarNames) where
+          instance DTraversable $(mkS fTyName tyVarNames) where
             ftraverse f rec =
               $(caseE [e| rec |] (map (ftraverseConstrCase 'f) fConstrs))
         |]
     _ ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
+      fail $ "makeDFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     ftraverseConstrCase :: Name -> SimpleConstrInfo -> MatchQ
@@ -233,22 +233,22 @@ isProductType typeInfo =
     [_] -> True
     _ -> False
 
-canDeriveFApplicative :: SimpleTypeInfo -> Bool
-canDeriveFApplicative = isProductType
+canDeriveDApplicative :: SimpleTypeInfo -> Bool
+canDeriveDApplicative = isProductType
 
-makeFApplicativeInstance :: SimpleTypeInfo -> DecsQ
-makeFApplicativeInstance genType =
+makeDApplicativeInstance :: SimpleTypeInfo -> DecsQ
+makeDApplicativeInstance genType =
   case genType of
     SimpleTypeInfo fTyName (initMay -> Just tyVars) [fConstr] ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FApplicative $(mkS fTyName tyVarNames) where
+          instance DApplicative $(mkS fTyName tyVarNames) where
             fpure x = $(fpureConstr [e| x |] fConstr)
             f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
         |]
     _ ->
-      fail $ "makeFApplicativeInstance is not implemented for " ++ show genType
+      fail $ "makeDApplicativeInstance is not implemented for " ++ show genType
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     fpureConstr :: ExpQ -> SimpleConstrInfo -> ExpQ
@@ -274,22 +274,22 @@ isSumType typeInfo =
   where
     hasOneArgument constr = sci_numArgs constr == 1
 
-canDeriveFChoice :: SimpleTypeInfo -> Bool
-canDeriveFChoice = isSumType
+canDeriveDChoice :: SimpleTypeInfo -> Bool
+canDeriveDChoice = isSumType
 
-makeFChoiceInstance :: SimpleTypeInfo -> DecsQ
-makeFChoiceInstance genType =
+makeDChoiceInstance :: SimpleTypeInfo -> DecsQ
+makeDChoiceInstance genType =
   case genType of
     SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FChoice $(mkS fTyName tyVarNames) where
+          instance DChoice $(mkS fTyName tyVarNames) where
             fchoose val =
               $(caseE [e| val |] (map fchooseConstr fConstrs))
         |]
     _ ->
-      fail $ "makeFChoiceInstance is not implemented for " ++ show genType
+      fail $ "makeDChoiceInstance is not implemented for " ++ show genType
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
     fchooseConstr :: SimpleConstrInfo -> MatchQ
@@ -312,18 +312,18 @@ makeFChoiceInstance genType =
             "fchoiceConstr not implemented for constructor with " ++
             show (sci_numArgs simpleConstrInfo) ++ " arguments"
 
-makeHasFTypeInstance
+makeHasDTypeInstance
   :: SimpleTypeInfo -- ^ the original datatype
   -> SimpleTypeInfo -- ^ the generated f datatype
   -> DecsQ
-makeHasFTypeInstance origTypeDec genTypeDec =
+makeHasDTypeInstance origTypeDec genTypeDec =
   let SimpleTypeInfo tyName tyVars constrs = origTypeDec
       SimpleTypeInfo fTyName _ fConstrs = genTypeDec
       tyVarNames = map nameFromTyVarBndr tyVars
   in
     [d|
-      instance HasFType $(mkS tyName tyVarNames) where
-        type FType $(mkS tyName tyVarNames) = $(mkS fTyName tyVarNames)
+      instance HasDType $(mkS tyName tyVarNames) where
+        type DType $(mkS tyName tyVarNames) = $(mkS fTyName tyVarNames)
         fiso rec =
           $(caseE [e| rec |] (zipWith fisoConstrCase constrs fConstrs))
         fosi frec =

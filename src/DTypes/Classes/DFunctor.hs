@@ -2,17 +2,17 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Classes.FFunctor
-  ( FFunctor (..)
+module DTypes.Classes.DFunctor
+  ( DFunctor (..)
   , (<<$>>)
   ) where
 
-import FTypes.Compose
-import FTypes.Trafo
+import DTypes.Compose
+import DTypes.Trafo
 
 infixl 4 <<$>>, <<$
 
-class FFunctor (r :: (k -> *) -> *) where
+class DFunctor (r :: (k -> *) -> *) where
   -- axioms:
   -- ffmap id = id
   -- ffmap (f . g) = fmap1 f . fmap1 g
@@ -25,8 +25,8 @@ class FFunctor (r :: (k -> *) -> *) where
   x <<$ r = ffmap (const x) r
 
 -- synonym
-(<<$>>) :: FFunctor r => (f ==> g) -> r f -> r g
+(<<$>>) :: DFunctor r => (f ==> g) -> r f -> r g
 (<<$>>) = ffmap
 
-instance (Functor f, FFunctor r) => FFunctor (Compose f r) where
+instance (Functor f, DFunctor r) => DFunctor (Compose f r) where
   ffmap t (Compose x) = Compose (ffmap t <$> x)

@@ -1,8 +1,8 @@
-name: ftypes
+name: dtypes
 version: 0.1.0.0
 synopsis: Functors, Applicatives, Traversables etc. of kind (k -> *) -> *
 description: Please see README.md
-homepage: https://github.com/timjb/ftypes#readme
+homepage: https://github.com/timjb/dtypes#readme
 license: MIT
 license-file: LICENSE
 author: Tim Baumann
@@ -20,20 +20,20 @@ tested-with:
 library
   hs-source-dirs: src
   exposed-modules:
-    FTypes,
-    FTypes.Classes,
-    FTypes.Classes.FApplicative,
-    FTypes.Classes.FChoice,
-    FTypes.Classes.FFunctor,
-    FTypes.Classes.FTraversable,
-    FTypes.Classes.HasFType,
-    FTypes.Combinators,
-    FTypes.Compose,
-    FTypes.Precompose,
-    FTypes.Postcompose,
-    FTypes.TH,
-    FTypes.Trafo,
-    FTypes.Internal.TH.Helpers
+    DTypes,
+    DTypes.Classes,
+    DTypes.Classes.DApplicative,
+    DTypes.Classes.DChoice,
+    DTypes.Classes.DFunctor,
+    DTypes.Classes.DTraversable,
+    DTypes.Classes.HasDType,
+    DTypes.Combinators,
+    DTypes.Compose,
+    DTypes.Precompose,
+    DTypes.Postcompose,
+    DTypes.TH,
+    DTypes.Trafo,
+    DTypes.Internal.TH.Helpers
   build-depends:
     base >= 4.7 && < 5,
     template-haskell,
@@ -42,13 +42,13 @@ library
   default-language: Haskell2010
   ghc-options: -Wall
 
-test-suite ftypes-th
+test-suite dtypes-th
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: templates.hs
   build-depends:
     base,
-    ftypes,
+    dtypes,
     template-haskell,
     HTF,
     safe,
@@ -58,4 +58,4 @@ test-suite ftypes-th
 
 source-repository head
   type: git
-  location: https://github.com/timjb/ftypes
+  location: https://github.com/timjb/dtypes

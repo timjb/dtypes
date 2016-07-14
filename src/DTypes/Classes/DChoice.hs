@@ -2,15 +2,15 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Classes.FChoice
+module DTypes.Classes.DChoice
   ( (:+:) (..)
-  , FChoice (..)
+  , DChoice (..)
   ) where
 
-import FTypes.Classes.FFunctor
+import DTypes.Classes.DFunctor
 
 -- TODO: import
 data (:+:) f g a = LeftF (f a) | RightF (g a)
 
-class FFunctor rec => FChoice (rec :: (k -> *) -> *) where
+class DFunctor rec => DChoice (rec :: (k -> *) -> *) where
   fchoose :: rec (f :+: g) -> Either (rec f) (rec g)

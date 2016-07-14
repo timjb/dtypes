@@ -10,8 +10,8 @@
 
 module Main (main) where
 
-import FTypes.Classes
-import FTypes.TH
+import DTypes.Classes
+import DTypes.TH
 
 import Control.Applicative
 import Data.Foldable (toList)
@@ -22,7 +22,7 @@ import Test.Framework
 
 data Foo a = Bar Int String | Blub () a
 
-makeFType ''Foo
+makeDType ''Foo
 
 ffoo1, ffoo2 :: FFoo Bool Maybe
 ffoo1 = FBar Nothing (Just "hallo")
@@ -30,7 +30,7 @@ ffoo2 = FBlub (Just ()) (Just True)
 
 newtype Url = Url { unUrl :: String } deriving (Eq, Show)
 
-makeFType ''Url
+makeDType ''Url
 
 maybeUrl1, maybeUrl2 :: FUrl Maybe
 maybeUrl1 = FUrl Nothing
@@ -54,7 +54,7 @@ me =
   , personHomepage = Url "http://timbaumann.info/"
   }
 
-makeFType ''Person
+makeDType ''Person
 
 unparsedMe :: FPerson (Const String)
 unparsedMe =
@@ -107,7 +107,7 @@ data SumType
   = MkInt Int
   | MkString String
 
-makeFType ''SumType
+makeDType ''SumType
 
 deriving instance Eq (FSumType Identity)
 deriving instance Show (FSumType Identity)

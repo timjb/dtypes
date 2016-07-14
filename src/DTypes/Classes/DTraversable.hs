@@ -3,16 +3,16 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Classes.FTraversable
-  ( FTraversable (..)
+module DTypes.Classes.DTraversable
+  ( DTraversable (..)
   , ftraverse'
   , fsequenceA'
   , ftoList
   ) where
 
-import FTypes.Classes.FFunctor
-import FTypes.Compose
-import FTypes.Trafo
+import DTypes.Classes.DFunctor
+import DTypes.Compose
+import DTypes.Trafo
 
 import Data.Functor.Identity (Identity (..))
 #if MIN_VERSION_base(4,8,0)
@@ -21,7 +21,7 @@ import Control.Applicative (Const (..))
 import Control.Applicative (Applicative (..), (<$>), Const (..))
 #endif
 
-class FFunctor r => FTraversable (r :: (k -> *) -> *) where
+class DFunctor r => DTraversable (r :: (k -> *) -> *) where
   {-# MINIMAL ftraverse | fsequenceA #-}
   ftraverse :: Applicative g => (f ==> Compose g h) -> r f -> g (r h)
   ftraverse f = fsequenceA . ffmap f
@@ -29,34 +29,34 @@ class FFunctor r => FTraversable (r :: (k -> *) -> *) where
   fsequenceA = ftraverse id
   -- TODO: more functions
 
-instance (Traversable f, FTraversable r) => FTraversable (Compose f r) where
+instance (Traversable f, DTraversable r) => DTraversable (Compose f r) where
   fsequenceA (Compose x) = Compose <$> traverse fsequenceA x 
 
-ftraverse' :: (FTraversable r, Applicative g) => (f ==> g) -> r f -> g (r Identity)
+ftraverse' :: (DTraversable r, Applicative g) => (f ==> g) -> r f -> g (r Identity)
 ftraverse' f = ftraverse (Compose . fmap Identity . f)
 
-fsequenceA' :: (FTraversable r, Applicative f) => r f -> f (r Identity)
+fsequenceA' :: (DTraversable r, Applicative f) => r f -> f (r Identity)
 fsequenceA' = fsequenceA . ffmap (Compose . fmap Identity)
 
 ftoList
-  :: FTraversable (rec :: (* -> *) -> *)
+  :: DTraversable (rec :: (* -> *) -> *)
   => rec (Const a)
   -> [a]
 ftoList = getConst . ftraverse' (Const . (:[]) . getConst) -- robot monkey!
 
 {-
 recFoldMap
-  :: (Monoid m, FTraversable rec)
+  :: (Monoid m, DTraversable rec)
   => (forall a. f a -> m) -> rec f -> m
 recFoldMap f = getConst . recTraverse (Const . f)
 
 recFold
-  :: (Monoid m, FTraversable rec)
+  :: (Monoid m, DTraversable rec)
   => rec (Const m) -> m
 recFold = getConst . recSequenceA
 
 recToList
-  :: FTraversable rec
+  :: DTraversable rec
   => rec (Const a) -> [a]
 recToList = recFoldMap (pure . getConst)
 -}

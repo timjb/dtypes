@@ -3,7 +3,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Trafo
+module DTypes.Trafo
   ( type Trafo
   , type (==>)
   , TrafoComp (..)
