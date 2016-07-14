@@ -29,4 +29,4 @@ class DFunctor (d :: (k -> *) -> *) where
 (<<$>>) = dfmap
 
 instance (Functor f, DFunctor d) => DFunctor (Compose f d) where
-  dfmap t (Compose x) = Compose (dfmap t <$> x)
+  dfmap t (Compose x) = Compose (fmap (dfmap t) x)
