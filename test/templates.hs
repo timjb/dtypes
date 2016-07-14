@@ -110,9 +110,20 @@ data SumType
 makeFType ''SumType
 
 deriving instance Eq (FSumType Identity)
-deriving instance Eq a => Eq (FSumType (Const a))
 deriving instance Show (FSumType Identity)
-deriving instance Show a => Show (FSumType (Const a))
+
+-- Once we drop compatibility for GHC 7.8, we can use the following two lines:
+--deriving instance Eq a => Eq (FSumType (Const a))
+--deriving instance Show a => Show (FSumType (Const a))
+
+instance Eq a => Eq (FSumType (Const a)) where
+  FMkInt (Const x) == FMkInt (Const y) = x == y
+  FMkString (Const x) == FMkString (Const y) = x == y
+  _ == _ = False
+
+instance Show a => Show (FSumType (Const a)) where
+  show (FMkInt c) = "FMkInt (" ++ show c ++ ")"
+  show (FMkString c) = "FMkString (" ++ show c ++ ")"
 
 test_fchoose = do
   assertEqual (fchoose intConstString) (Left (FMkInt (Const "zweiundvierzig")))
