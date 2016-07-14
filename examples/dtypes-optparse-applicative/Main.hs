@@ -24,14 +24,14 @@ makeDType ''Sample
 sample :: OA.Parser Sample
 sample =
   fmap dosi $ dsequenceA' $
-  FSample
-  { fquiet =
+  DSample
+  { dquiet =
       OA.switch $
       mconcat
       [ OA.long "quiet"
       , OA.help "Whether to be quiet"
       ]
-  , fhello =
+  , dhello =
       OA.strOption $
       mconcat
       [ OA.long "hello"
