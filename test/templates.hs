@@ -10,8 +10,8 @@
 
 module Main (main) where
 
-import FTypes.Classes
-import FTypes.TH
+import DTypes.Classes
+import DTypes.TH
 
 import Control.Applicative
 import Data.Foldable (toList)
@@ -20,24 +20,29 @@ import Data.Functor.Identity (Identity (..))
 import Safe (readMay)
 import Test.Framework
 
-data Foo a = Bar Int String | Blub () a
+data Foo a
+  = Bar Int String
+  | Blub () a
 
-makeFType ''Foo
+makeDType ''Foo
 
-ffoo1, ffoo2 :: FFoo Bool Maybe
-ffoo1 = FBar Nothing (Just "hallo")
-ffoo2 = FBlub (Just ()) (Just True)
+ffoo1, ffoo2 :: DFoo Bool Maybe
+ffoo1 = DBar Nothing (Just "hallo")
+ffoo2 = DBlub (Just ()) (Just True)
 
-newtype Url = Url { unUrl :: String } deriving (Eq, Show)
+newtype Url
+  = Url
+  { unUrl :: String
+  } deriving (Eq, Show)
 
-makeFType ''Url
+makeDType ''Url
 
-maybeUrl1, maybeUrl2 :: FUrl Maybe
-maybeUrl1 = FUrl Nothing
-maybeUrl2 = FUrl (Just "http://haskell.org/")
+maybeUrl1, maybeUrl2 :: DUrl Maybe
+maybeUrl1 = DUrl Nothing
+maybeUrl2 = DUrl (Just "http://haskell.org/")
 
-listUrl :: FUrl []
-listUrl = ffmap toList maybeUrl1
+listUrl :: DUrl []
+listUrl = dfmap toList maybeUrl1
 
 data Person
   = Person
@@ -50,27 +55,27 @@ me :: Person
 me =
   Person
   { personName = "Tim Baumann"
-  , personAge = 21
+  , personAge = 22
   , personHomepage = Url "http://timbaumann.info/"
   }
 
-makeFType ''Person
+makeDType ''Person
 
-unparsedMe :: FPerson (Const String)
+unparsedMe :: DPerson (Const String)
 unparsedMe =
-  FPerson
-  { fpersonName = Const "Tim Baumann"
-  , fpersonAge = Const "21"
-  , fpersonHomepage = Const "http://timbaumann.info/"
+  DPerson
+  { dpersonName = Const "Tim Baumann"
+  , dpersonAge = Const "22"
+  , dpersonHomepage = Const "http://timbaumann.info/"
   }
 
-unitMe :: FPerson (Const ())
+unitMe :: DPerson (Const ())
 unitMe = (\(Const _) -> Const ()) <<$>> unparsedMe
 
 serializedMe :: String
-serializedMe = getConst (fsequenceA' unparsedMe)
+serializedMe = getConst (dsequenceA' unparsedMe)
 
-test_serializedMe = assertEqual serializedMe "Tim Baumann21http://timbaumann.info/"
+test_serializedMe = assertEqual serializedMe "Tim Baumann22http://timbaumann.info/"
 
 data FieldDesc a where
   StringField :: FieldDesc String
@@ -84,43 +89,54 @@ parseField fieldDesc (Const str) =
     IntField -> readMay str
     UrlField -> Just (Url str) -- fake-todo: validation
 
-personFormatDesc :: FPerson FieldDesc
+personFormatDesc :: DPerson FieldDesc
 personFormatDesc =
-  FPerson
-  { fpersonName = StringField
-  , fpersonAge = IntField
-  , fpersonHomepage = UrlField
+  DPerson
+  { dpersonName = StringField
+  , dpersonAge = IntField
+  , dpersonHomepage = UrlField
   }
 
-maybeParsedMe :: Maybe (FPerson Identity)
-maybeParsedMe = fsequenceA' (fliftA2 parseField personFormatDesc unparsedMe)
+maybeParsedMe :: Maybe (DPerson Identity)
+maybeParsedMe = dsequenceA' (dliftA2 parseField personFormatDesc unparsedMe)
 
 -- TODO: Use Iso to compare for equality
 test_maybeParsedMe = do
-  assertEqual (fpersonName <$> maybeParsedMe) (Just $ Identity "Tim Baumann")
-  assertEqual (fpersonAge <$> maybeParsedMe) (Just $ Identity 21)
-  assertEqual (fpersonHomepage <$> maybeParsedMe) (Just $ Identity (Url "http://timbaumann.info/"))
+  assertEqual (dpersonName <$> maybeParsedMe) (Just $ Identity "Tim Baumann")
+  assertEqual (dpersonAge <$> maybeParsedMe) (Just $ Identity 22)
+  assertEqual (dpersonHomepage <$> maybeParsedMe) (Just $ Identity (Url "http://timbaumann.info/"))
 
-test_osiiso = assertEqual (fosi (fiso me)) me
+test_osiiso = assertEqual (dosi (diso me)) me
 
 data SumType
   = MkInt Int
   | MkString String
 
-makeFType ''SumType
+makeDType ''SumType
 
-deriving instance Eq (FSumType Identity)
-deriving instance Eq a => Eq (FSumType (Const a))
-deriving instance Show (FSumType Identity)
-deriving instance Show a => Show (FSumType (Const a))
+deriving instance Eq (DSumType Identity)
+deriving instance Show (DSumType Identity)
 
-test_fchoose = do
-  assertEqual (fchoose intConstString) (Left (FMkInt (Const "zweiundvierzig")))
-  assertEqual (fchoose stringIdentity) (Right (FMkString (Identity "Hallo")))
+-- Once we drop compatibility for GHC 7.8, we can use the following two lines:
+--deriving instance Eq a => Eq (DSumType (Const a))
+--deriving instance Show a => Show (DSumType (Const a))
+
+instance Eq a => Eq (DSumType (Const a)) where
+  DMkInt (Const x) == DMkInt (Const y) = x == y
+  DMkString (Const x) == DMkString (Const y) = x == y
+  _ == _ = False
+
+instance Show a => Show (DSumType (Const a)) where
+  show (DMkInt (Const x)) = "DMkInt (Const " ++ showsPrec 9 x ")"
+  show (DMkString (Const x)) = "DMkString (Const " ++ showsPrec 9 x ")"
+
+test_dchoose = do
+  assertEqual (dchoose intConstString) (Left (DMkInt (Const "zweiundvierzig")))
+  assertEqual (dchoose stringIdentity) (Right (DMkString (Identity "Hallo")))
   where
-    intConstString, stringIdentity :: FSumType (Const String :+: Identity)
-    intConstString = FMkInt (LeftF (Const "zweiundvierzig"))
-    stringIdentity = FMkString (RightF (Identity "Hallo"))
+    intConstString, stringIdentity :: DSumType (Const String :+: Identity)
+    intConstString = DMkInt (LeftF (Const "zweiundvierzig"))
+    stringIdentity = DMkString (RightF (Identity "Hallo"))
 
 main :: IO ()
 main = htfMain htf_thisModulesTests

@@ -3,7 +3,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeOperators #-}
 
-module FTypes.Trafo
+module DTypes.Trafo
   ( type Trafo
   , type (==>)
   , TrafoComp (..)
@@ -22,7 +22,9 @@ type Trafo (f :: k -> *) (g :: k -> *)
 type f ==> g = Trafo f g
 
 newtype TrafoComp f g a
-  = TrafoComp { unTrafoComp :: f a -> g a }
+  = TrafoComp
+  { unTrafoComp :: f a -> g a
+  }
 
 type (==>>) f g = TrafoComp f g
 

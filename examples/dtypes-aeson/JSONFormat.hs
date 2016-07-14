@@ -2,7 +2,7 @@
 
 module JSONFormat where
 
-import FTypes
+import DTypes
 
 import Control.Applicative (Const (..))
 import Data.Functor.Identity (Identity (..))
@@ -48,9 +48,9 @@ parseField field obj = do
   parseJSON (fieldFormat field) jsonVal
 
 objectFormat
-  :: (HasFType o, FApplicative (FType o), FTraversable (FType o))
+  :: (HasDType o, DApplicative (DType o), DTraversable (DType o))
   => String
-  -> FType o JSONField
+  -> DType o JSONField
   -> JSONFormat o
 objectFormat name fields =
   JSONFormat
@@ -60,9 +60,9 @@ objectFormat name fields =
   where
     serialize val =
       A.object $
-      ftoList $
-      fliftA2 (\field (Identity val) -> Const (serializeField field val)) fields $
-      fiso val
+      dtoList $
+      dliftA2 (\field (Identity val) -> Const (serializeField field val)) fields $
+      diso val
     parse =
       A.withObject name $ \obj ->
-        fosi <$> ftraverse' (\field -> parseField field obj) fields
+        dosi <$> dtraverse' (\field -> parseField field obj) fields

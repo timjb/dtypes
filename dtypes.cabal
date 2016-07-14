@@ -1,0 +1,62 @@
+name: dtypes
+version: 0.1.0.0
+synopsis: Functors, Applicatives, Traversables etc. of kind (k -> *) -> *
+description: Please see README.md
+homepage: https://github.com/timjb/dtypes#readme
+license: MIT
+license-file: LICENSE
+author: Tim Baumann
+maintainer: tim@timbaumann.info
+copyright: MIT License
+category: Data, Generics
+build-type: Simple
+-- extra-source-files:
+cabal-version: >= 1.10
+tested-with:
+  GHC == 7.8.4,
+  GHC == 7.10.2,
+  GHC == 8.0.1
+
+library
+  hs-source-dirs: src
+  exposed-modules:
+    DTypes,
+    DTypes.Classes,
+    DTypes.Classes.DApplicative,
+    DTypes.Classes.DChoice,
+    DTypes.Classes.DFunctor,
+    DTypes.Classes.DMonad,
+    DTypes.Classes.DTraversable,
+    DTypes.Classes.HasDType,
+    DTypes.Combinators,
+    DTypes.Compose,
+    DTypes.Precompose,
+    DTypes.Postcompose,
+    DTypes.TH,
+    DTypes.Trafo,
+    DTypes.Internal.TH.Helpers
+  build-depends:
+    base >= 4.7 && < 5,
+    template-haskell,
+    transformers >= 0.3 && < 0.6,
+    safe
+  default-language: Haskell2010
+  ghc-options: -Wall
+
+test-suite dtypes-th
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: templates.hs
+  build-depends:
+    base,
+    dtypes,
+    template-haskell,
+    HTF,
+    safe,
+    transformers
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+
+source-repository head
+  type: git
+  location: https://github.com/timjb/dtypes
