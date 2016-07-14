@@ -122,8 +122,8 @@ instance Eq a => Eq (FSumType (Const a)) where
   _ == _ = False
 
 instance Show a => Show (FSumType (Const a)) where
-  show (FMkInt c) = "FMkInt (" ++ show c ++ ")"
-  show (FMkString c) = "FMkString (" ++ show c ++ ")"
+  show (FMkInt (Const x)) = "FMkInt (Const " ++ showsPrec 9 x ")"
+  show (FMkString (Const x)) = "FMkString (Const " ++ showsPrec 9 x ")"
 
 test_fchoose = do
   assertEqual (fchoose intConstString) (Left (FMkInt (Const "zweiundvierzig")))
