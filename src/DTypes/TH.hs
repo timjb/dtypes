@@ -2,17 +2,17 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module FTypes.TH
-  ( makeFType
+module DTypes.TH
+  ( makeDType
   ) where
 
 import Safe (initMay)
 
 import Data.Functor.Identity (Identity (..))
-import FTypes.Classes
-import FTypes.Compose
-import FTypes.Internal.TH.Helpers
-import FTypes.Trafo
+import DTypes.Classes
+import DTypes.Compose
+import DTypes.Internal.TH.Helpers
+import DTypes.Trafo
 
 #if !MIN_VERSION_base(4,8,0)
 import Control.Applicative (Applicative (..), (<$>))
@@ -21,12 +21,12 @@ import Control.Applicative (Applicative (..), (<$>))
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax
 
-makeFType :: Name -> DecsQ
-makeFType tyName = do
+makeDType :: Name -> DecsQ
+makeDType tyName = do
   info <- reify tyName
   case info of
     TyConI dec -> do
-      genDec <- makeFTypeForDec dec
+      genDec <- makeDTypeForDec dec
       origType <-
         case getSimpleTypeInfo dec of
           Just typeDecInfo -> return typeDecInfo
@@ -35,29 +35,29 @@ makeFType tyName = do
         case getSimpleTypeInfo genDec of
           Just typeDecInfo -> return typeDecInfo
           Nothing -> fail "could not get generated type dec info!"
-      ffunctorDecs <- makeFFunctorInstance genType
-      ftraverseDecs <- makeFTraversableInstance genType
-      fapplicativeDecs <-
-          if canDeriveFApplicative genType
-            then makeFApplicativeInstance genType
+      dfunctorDecs <- makeDFunctorInstance genType
+      dtraverseDecs <- makeDTraversableInstance genType
+      dapplicativeDecs <-
+          if canDeriveDApplicative genType
+            then makeDApplicativeInstance genType
             else pure []
-      fchoiceDecs <-
-          if canDeriveFChoice genType
-            then makeFChoiceInstance genType
+      dchoiceDecs <-
+          if canDeriveDChoice genType
+            then makeDChoiceInstance genType
             else pure []
-      hasFTypeDecs <- makeHasFTypeInstance origType genType
+      hasDTypeDecs <- makeHasDTypeInstance origType genType
       pure $
-        [genDec] ++ ffunctorDecs ++ ftraverseDecs ++
-        fapplicativeDecs ++ fchoiceDecs ++ hasFTypeDecs
-    _ -> fail "makeFType: Expected type constructor name"
+        [genDec] ++ dfunctorDecs ++ dtraverseDecs ++
+        dapplicativeDecs ++ dchoiceDecs ++ hasDTypeDecs
+    _ -> fail "makeDType: Expected type constructor name"
 
 modifyName :: (String -> String) -> Name -> Name
 modifyName f name =
   let Name (OccName str) flavour = name
   in Name (OccName (f str)) flavour
 
-makeFTypeForDec :: Dec -> DecQ
-makeFTypeForDec dec =
+makeDTypeForDec :: Dec -> DecQ
+makeDTypeForDec dec =
   case dec of
 #if MIN_VERSION_template_haskell(2,11,0)
     DataD ctx tyName tyVars _kind constrs _deriving -> do
@@ -65,14 +65,14 @@ makeFTypeForDec dec =
     DataD ctx tyName tyVars constrs _deriving -> do
 #endif
       (functorTyVarName, functorTyVarBndr) <- functorTyVar
-      let fCtx = ctx
-          fTyName = modifyName ("F" ++) tyName
-          fTyVars = tyVars ++ [functorTyVarBndr]
-      fConstrs <- mapM (makeFConForCon functorTyVarName) constrs
+      let dCtx = ctx
+          dTyName = modifyName ("D" ++) tyName
+          dTyVars = tyVars ++ [functorTyVarBndr]
+      dConstrs <- mapM (makeFConForCon functorTyVarName) constrs
 #if MIN_VERSION_template_haskell(2,11,0)
-      return (DataD fCtx fTyName fTyVars Nothing fConstrs fDeriving)
+      return (DataD dCtx dTyName dTyVars Nothing dConstrs fDeriving)
 #else
-      return (DataD fCtx fTyName fTyVars fConstrs fDeriving)
+      return (DataD dCtx dTyName dTyVars dConstrs fDeriving)
 #endif
 #if MIN_VERSION_template_haskell(2,11,0)
     NewtypeD ctx tyName tyVars _ constr _deriving -> do
@@ -80,16 +80,16 @@ makeFTypeForDec dec =
     NewtypeD ctx tyName tyVars constr _deriving -> do
 #endif
       (functorTyVarName, functorTyVarBndr) <- functorTyVar
-      let fCtx = ctx
-          fTyName = modifyName ("F" ++) tyName
-          fTyVars = tyVars ++ [functorTyVarBndr]
-      fConstr <- makeFConForCon functorTyVarName constr
+      let dCtx = ctx
+          dTyName = modifyName ("D" ++) tyName
+          dTyVars = tyVars ++ [functorTyVarBndr]
+      dConstr <- makeFConForCon functorTyVarName constr
 #if MIN_VERSION_template_haskell(2,11,0)
-      return (NewtypeD fCtx fTyName fTyVars Nothing fConstr fDeriving)
+      return (NewtypeD dCtx dTyName dTyVars Nothing dConstr fDeriving)
 #else
-      return (NewtypeD fCtx fTyName fTyVars fConstr fDeriving)
+      return (NewtypeD dCtx dTyName dTyVars dConstr fDeriving)
 #endif
-    _ -> fail $ "makeFType not implemented for " ++ show dec
+    _ -> fail $ "makeDType not implemented for " ++ show dec
   where
     fDeriving = []
     functorTyVar = do
@@ -103,28 +103,28 @@ makeFConForCon :: Name -> Con -> ConQ
 makeFConForCon functorTyVarName con =
   case con of
     NormalC conName argTypes -> do
-      let fConName = modifyName ("F" ++) conName
-      fArgTypes <- mapM makeFStrictType argTypes
-      return (NormalC fConName fArgTypes)
+      let dConName = modifyName ("D" ++) conName
+      dArgTypes <- mapM makeDStrictType argTypes
+      return (NormalC dConName dArgTypes)
     RecC conName argTypes -> do
-      let fConName = modifyName ("F" ++) conName
-      fArgTypes <- mapM makeFVarStrictType argTypes
-      return (RecC fConName fArgTypes)
+      let dConName = modifyName ("D" ++) conName
+      dArgTypes <- mapM makeDVarStrictType argTypes
+      return (RecC dConName dArgTypes)
     _ -> fail $ "makeFConForCon not implemented for " ++ show con
   where
-    makeFStrictType (strictness, ty) = do
-      return (fFieldStrictness strictness, fFieldType ty)
-    makeFVarStrictType (fieldName, strictness, ty) = do
-      return (fFieldName fieldName, fFieldStrictness strictness, fFieldType ty)
-    fFieldName = modifyName ("f" ++)
-    fFieldType ty = (VarT functorTyVarName) `AppT` ty
+    makeDStrictType (strictness, ty) = do
+      return (dFieldStrictness strictness, dFieldType ty)
+    makeDVarStrictType (fieldName, strictness, ty) = do
+      return (dFieldName fieldName, dFieldStrictness strictness, dFieldType ty)
+    dFieldName = modifyName ("d" ++)
+    dFieldType ty = (VarT functorTyVarName) `AppT` ty
 #if MIN_VERSION_template_haskell(2,11,0)
-    fFieldStrictness :: Bang -> Bang
-    fFieldStrictness (Bang _unpackedness sourceStrictness) =
+    dFieldStrictness :: Bang -> Bang
+    dFieldStrictness (Bang _unpackedness sourceStrictness) =
       Bang NoSourceUnpackedness sourceStrictness
 #else
-    fFieldStrictness :: Strict -> Strict
-    fFieldStrictness strictness =
+    dFieldStrictness :: Strict -> Strict
+    dFieldStrictness strictness =
       case strictness of
         IsStrict -> IsStrict
         Unpacked -> IsStrict
@@ -182,49 +182,49 @@ getSimpleTypeInfo typeDec =
         }
     _ -> Nothing
 
-makeFFunctorInstance :: SimpleTypeInfo -> DecsQ
-makeFFunctorInstance typeDec =
+makeDFunctorInstance :: SimpleTypeInfo -> DecsQ
+makeDFunctorInstance typeDec =
   case typeDec of
-    SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
+    SimpleTypeInfo dTyName (initMay -> Just tyVars) dConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FFunctor $(mkS fTyName tyVarNames) where
-            ffmap f rec =
-              $(caseE [e| rec |] (map (ffmapConstrCase 'f) fConstrs))
+          instance DFunctor $(mkS dTyName tyVarNames) where
+            dfmap f rec =
+              $(caseE [e| rec |] (map (dfmapConstrCase 'f) dConstrs))
         |]
     _ ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
+      fail $ "makeDFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    ffmapConstrCase :: Name -> SimpleConstrInfo -> MatchQ
-    ffmapConstrCase funName (SimpleConstrInfo fConstrName constrArity) = do
+    dfmapConstrCase :: Name -> SimpleConstrInfo -> MatchQ
+    dfmapConstrCase funName (SimpleConstrInfo dConstrName constrArity) = do
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
-      let pat = conP fConstrName (map varP argNames)
-          body = conE fConstrName `appEs` map (\v -> varE funName `appE` varE v) argNames
+      let pat = conP dConstrName (map varP argNames)
+          body = conE dConstrName `appEs` map (\v -> varE funName `appE` varE v) argNames
       match pat (normalB body) []
 
-makeFTraversableInstance :: SimpleTypeInfo -> DecsQ
-makeFTraversableInstance typeDec =
+makeDTraversableInstance :: SimpleTypeInfo -> DecsQ
+makeDTraversableInstance typeDec =
   case typeDec of
-    SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
+    SimpleTypeInfo dTyName (initMay -> Just tyVars) dConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FTraversable $(mkS fTyName tyVarNames) where
-            ftraverse f rec =
-              $(caseE [e| rec |] (map (ftraverseConstrCase 'f) fConstrs))
+          instance DTraversable $(mkS dTyName tyVarNames) where
+            dtraverse f rec =
+              $(caseE [e| rec |] (map (dtraverseConstrCase 'f) dConstrs))
         |]
     _ ->
-      fail $ "makeFFunctorInstance is not implemented for " ++ show typeDec
+      fail $ "makeDFunctorInstance is not implemented for " ++ show typeDec
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    ftraverseConstrCase :: Name -> SimpleConstrInfo -> MatchQ
-    ftraverseConstrCase funName (SimpleConstrInfo fConstrName constrArity) = do
+    dtraverseConstrCase :: Name -> SimpleConstrInfo -> MatchQ
+    dtraverseConstrCase funName (SimpleConstrInfo dConstrName constrArity) = do
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
-      let pat = conP fConstrName (map varP argNames)
+      let pat = conP dConstrName (map varP argNames)
           mapArg v = [e| getCompose ($(varE funName) $(varE v)) |]
-          body = conE fConstrName `liftAppEs` map mapArg argNames
+          body = conE dConstrName `liftAppEs` map mapArg argNames
       match pat (normalB body) []
 
 isProductType :: SimpleTypeInfo -> Bool
@@ -233,40 +233,40 @@ isProductType typeInfo =
     [_] -> True
     _ -> False
 
-canDeriveFApplicative :: SimpleTypeInfo -> Bool
-canDeriveFApplicative = isProductType
+canDeriveDApplicative :: SimpleTypeInfo -> Bool
+canDeriveDApplicative = isProductType
 
-makeFApplicativeInstance :: SimpleTypeInfo -> DecsQ
-makeFApplicativeInstance genType =
+makeDApplicativeInstance :: SimpleTypeInfo -> DecsQ
+makeDApplicativeInstance genType =
   case genType of
-    SimpleTypeInfo fTyName (initMay -> Just tyVars) [fConstr] ->
+    SimpleTypeInfo dTyName (initMay -> Just tyVars) [dConstr] ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FApplicative $(mkS fTyName tyVarNames) where
-            fpure x = $(fpureConstr [e| x |] fConstr)
-            f <<*>> rec = $(fapConstr [e| f |] [e| rec |] fConstr)
+          instance DApplicative $(mkS dTyName tyVarNames) where
+            dpure x = $(dpureConstr [e| x |] dConstr)
+            f <<*>> rec = $(dapConstr [e| f |] [e| rec |] dConstr)
         |]
     _ ->
-      fail $ "makeFApplicativeInstance is not implemented for " ++ show genType
+      fail $ "makeDApplicativeInstance is not implemented for " ++ show genType
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    fpureConstr :: ExpQ -> SimpleConstrInfo -> ExpQ
-    fpureConstr valExp (SimpleConstrInfo fConstrName constrArity) =
-      conE fConstrName `appEs` replicate constrArity valExp
-    fapConstr :: ExpQ -> ExpQ -> SimpleConstrInfo -> ExpQ
-    fapConstr funRecExpr argRecExpr (SimpleConstrInfo fConstrName constrArity) = do
+    dpureConstr :: ExpQ -> SimpleConstrInfo -> ExpQ
+    dpureConstr valExp (SimpleConstrInfo dConstrName constrArity) =
+      conE dConstrName `appEs` replicate constrArity valExp
+    dapConstr :: ExpQ -> ExpQ -> SimpleConstrInfo -> ExpQ
+    dapConstr funRecExpr argRecExpr (SimpleConstrInfo dConstrName constrArity) = do
       let makeArgs prefix =
             mapM (\i -> newName (prefix ++ show i)) [1..constrArity]
       funArgNames <- makeArgs "f"
       argArgNames <- makeArgs "x"
-      let funPat = conP fConstrName (map varP funArgNames)
-          argPat = conP fConstrName (map varP argArgNames)
+      let funPat = conP dConstrName (map varP funArgNames)
+          argPat = conP dConstrName (map varP argArgNames)
           applyComponent funName argName =
             [e| $(varE funName) $$ $(varE argName) |]
       destructure funRecExpr funPat $
         destructure argRecExpr argPat $
-        conE fConstrName `appEs` zipWith applyComponent funArgNames argArgNames
+        conE dConstrName `appEs` zipWith applyComponent funArgNames argArgNames
 
 isSumType :: SimpleTypeInfo -> Bool
 isSumType typeInfo =
@@ -274,37 +274,37 @@ isSumType typeInfo =
   where
     hasOneArgument constr = sci_numArgs constr == 1
 
-canDeriveFChoice :: SimpleTypeInfo -> Bool
-canDeriveFChoice = isSumType
+canDeriveDChoice :: SimpleTypeInfo -> Bool
+canDeriveDChoice = isSumType
 
-makeFChoiceInstance :: SimpleTypeInfo -> DecsQ
-makeFChoiceInstance genType =
+makeDChoiceInstance :: SimpleTypeInfo -> DecsQ
+makeDChoiceInstance genType =
   case genType of
-    SimpleTypeInfo fTyName (initMay -> Just tyVars) fConstrs ->
+    SimpleTypeInfo dTyName (initMay -> Just tyVars) dConstrs ->
       let tyVarNames = map nameFromTyVarBndr tyVars
       in
         [d|
-          instance FChoice $(mkS fTyName tyVarNames) where
-            fchoose val =
-              $(caseE [e| val |] (map fchooseConstr fConstrs))
+          instance DChoice $(mkS dTyName tyVarNames) where
+            dchoose val =
+              $(caseE [e| val |] (map dchooseConstr dConstrs))
         |]
     _ ->
-      fail $ "makeFChoiceInstance is not implemented for " ++ show genType
+      fail $ "makeDChoiceInstance is not implemented for " ++ show genType
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    fchooseConstr :: SimpleConstrInfo -> MatchQ
-    fchooseConstr simpleConstrInfo =
+    dchooseConstr :: SimpleConstrInfo -> MatchQ
+    dchooseConstr simpleConstrInfo =
       case simpleConstrInfo of
-        SimpleConstrInfo { sci_name = fConstrName, sci_numArgs = 1 } -> do
+        SimpleConstrInfo { sci_name = dConstrName, sci_numArgs = 1 } -> do
           argName <- newName "x"
-          let pat = conP fConstrName [varP argName]
+          let pat = conP dConstrName [varP argName]
               body =
                 [e|
                   case $(varE argName) of
                     LeftF l ->
-                      Left ($(conE fConstrName) l)
+                      Left ($(conE dConstrName) l)
                     RightF r ->
-                      Right ($(conE fConstrName) r)
+                      Right ($(conE dConstrName) r)
                 |]
           match pat (normalB body) []
         _ ->
@@ -312,38 +312,38 @@ makeFChoiceInstance genType =
             "fchoiceConstr not implemented for constructor with " ++
             show (sci_numArgs simpleConstrInfo) ++ " arguments"
 
-makeHasFTypeInstance
+makeHasDTypeInstance
   :: SimpleTypeInfo -- ^ the original datatype
   -> SimpleTypeInfo -- ^ the generated f datatype
   -> DecsQ
-makeHasFTypeInstance origTypeDec genTypeDec =
+makeHasDTypeInstance origTypeDec genTypeDec =
   let SimpleTypeInfo tyName tyVars constrs = origTypeDec
-      SimpleTypeInfo fTyName _ fConstrs = genTypeDec
+      SimpleTypeInfo dTyName _ dConstrs = genTypeDec
       tyVarNames = map nameFromTyVarBndr tyVars
   in
     [d|
-      instance HasFType $(mkS tyName tyVarNames) where
-        type FType $(mkS tyName tyVarNames) = $(mkS fTyName tyVarNames)
-        fiso rec =
-          $(caseE [e| rec |] (zipWith fisoConstrCase constrs fConstrs))
-        fosi frec =
-          $(caseE [e| frec |] (zipWith fosiConstrCase constrs fConstrs))
+      instance HasDType $(mkS tyName tyVarNames) where
+        type DType $(mkS tyName tyVarNames) = $(mkS dTyName tyVarNames)
+        diso rec =
+          $(caseE [e| rec |] (zipWith disoConstrCase constrs dConstrs))
+        dosi frec =
+          $(caseE [e| frec |] (zipWith dosiConstrCase constrs dConstrs))
     |]
   where
     mkS tyName vars = pure (tyName `conAppsT` map VarT vars)
-    fisoConstrCase :: SimpleConstrInfo -> SimpleConstrInfo -> MatchQ
-    fisoConstrCase origConstr genConstr = do
+    disoConstrCase :: SimpleConstrInfo -> SimpleConstrInfo -> MatchQ
+    disoConstrCase origConstr genConstr = do
       let SimpleConstrInfo constrName constrArity = origConstr
-          SimpleConstrInfo fConstrName _ = genConstr
+          SimpleConstrInfo dConstrName _ = genConstr
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
       let pat = conP constrName (map varP argNames)
-          body = conE fConstrName `appEs` map (\v -> [| Identity $(varE v) |]) argNames
+          body = conE dConstrName `appEs` map (\v -> [| Identity $(varE v) |]) argNames
       match pat (normalB body) []
-    fosiConstrCase :: SimpleConstrInfo -> SimpleConstrInfo -> MatchQ
-    fosiConstrCase origConstr genConstr = do
+    dosiConstrCase :: SimpleConstrInfo -> SimpleConstrInfo -> MatchQ
+    dosiConstrCase origConstr genConstr = do
       let SimpleConstrInfo constrName constrArity = origConstr
-          SimpleConstrInfo fConstrName _ = genConstr
+          SimpleConstrInfo dConstrName _ = genConstr
       argNames <- mapM (\i -> newName ("x" ++ show i)) [1..constrArity]
-      let pat = conP fConstrName (map (\v -> [p| Identity $(varP v) |]) argNames)
+      let pat = conP dConstrName (map (\v -> [p| Identity $(varP v) |]) argNames)
           body = conE constrName `appEs` map varE argNames
       match pat (normalB body) []

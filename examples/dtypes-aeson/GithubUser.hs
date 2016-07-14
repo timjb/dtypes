@@ -7,7 +7,7 @@
 module GithubUser where
 
 import JSONFormat
-import FTypes
+import DTypes
 
 import Data.Aeson ((.=), (.:))
 import qualified Data.Aeson as A
@@ -66,13 +66,13 @@ instance A.FromJSON GithubUser where
 
 -}
 
-makeFType ''GithubUser
+makeDType ''GithubUser
 
 ghUserJSONFormat :: JSONFormat GithubUser
 ghUserJSONFormat =
   objectFormat "GithubUser" $
-  FGithubUser
-    { fuserLogin = field "login"
-    , fuserId = field "id"
-    , fuserAvatarUrl = field "avatar_url"
+  DGithubUser
+    { duserLogin = field "login"
+    , duserId = field "id"
+    , duserAvatarUrl = field "avatar_url"
     }
