@@ -10,10 +10,13 @@ module FTypes.Classes.FApplicative
   ) where
 
 import FTypes.Classes.FFunctor
+import FTypes.Compose
 import FTypes.Trafo
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative ((<$>))
+#if MIN_VERSION_base(4,8,0)
+import Control.Applicative (liftA2)
+#else
+import Control.Applicative ((<$>), liftA2)
 #endif
 
 infixl 4 <<*>>, <<*, *>>
@@ -31,6 +34,10 @@ class FFunctor r => FApplicative (r :: (k -> *) -> *) where
   s *>> t = (wrap1 id <<$ s) <<*>> t
   (<<*) :: r f -> r g -> r f
   (<<*) = fliftA2 const
+
+instance (Applicative f, FApplicative r) => FApplicative (Compose f r) where
+  fpure x = Compose (pure (fpure x))
+  Compose f <<*>> Compose x = Compose (liftA2 (<<*>>) f x)
 
 fpureTrafo :: FApplicative r => (f ==> g) -> r (f ==>> g)
 fpureTrafo f = fpure (TrafoComp f)

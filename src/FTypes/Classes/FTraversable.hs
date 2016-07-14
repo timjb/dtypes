@@ -29,6 +29,9 @@ class FFunctor r => FTraversable (r :: (k -> *) -> *) where
   fsequenceA = ftraverse id
   -- TODO: more functions
 
+instance (Traversable f, FTraversable r) => FTraversable (Compose f r) where
+  fsequenceA (Compose x) = Compose <$> traverse fsequenceA x 
+
 ftraverse' :: (FTraversable r, Applicative g) => (f ==> g) -> r f -> g (r Identity)
 ftraverse' f = ftraverse (Compose . fmap Identity . f)
 

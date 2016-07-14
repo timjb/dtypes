@@ -7,6 +7,7 @@ module FTypes.Classes.FFunctor
   , (<<$>>)
   ) where
 
+import FTypes.Compose
 import FTypes.Trafo
 
 infixl 4 <<$>>, <<$
@@ -26,3 +27,6 @@ class FFunctor (r :: (k -> *) -> *) where
 -- synonym
 (<<$>>) :: FFunctor r => (f ==> g) -> r f -> r g
 (<<$>>) = ffmap
+
+instance (Functor f, FFunctor r) => FFunctor (Compose f r) where
+  ffmap t (Compose x) = Compose (ffmap t <$> x)
