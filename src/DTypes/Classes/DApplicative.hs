@@ -5,8 +5,8 @@
 
 module DTypes.Classes.DApplicative
   ( DApplicative (..)
-  , fpureTrafo
-  , fliftA1, fliftA2, fliftA3, fliftA4, fliftA5, fliftA6, fliftA7, fliftA8
+  , dpureTrafo
+  , dliftA1, dliftA2, dliftA3, dliftA4, dliftA5, dliftA6, dliftA7, dliftA8
   ) where
 
 import DTypes.Classes.DFunctor
@@ -21,26 +21,26 @@ import Control.Applicative ((<$>), liftA2)
 
 infixl 4 <<*>>, <<*, *>>
 
-class DFunctor r => DApplicative (r :: (k -> *) -> *) where
+class DFunctor d => DApplicative (d :: (k -> *) -> *) where
   -- axioms (analog to applicative axioms):
-  --   fpure idTrafo <<*>> r = r
+  --   dpure idTrafo <<*>> d = r
   --   pureTrafo o <<*>> u <<*>> v <<*>> w = u <<*>> (v <<*>> w)
-  --   pureTrafo f <<**>> fpure x = fpure (f x)
-  --   u <*> fpure y = fpure ($$ y) <*> u
-  fpure :: (forall (a :: k). f a) -> r f
-  (<<*>>) :: r (f ==>> g) -> r f -> r g
+  --   pureTrafo f <<**>> dpure x = dpure (f x)
+  --   u <*> dpure y = dpure ($$ y) <*> u
+  dpure :: (forall (a :: k). f a) -> d f
+  (<<*>>) :: d (f ==>> g) -> d f -> d g
 
-  (*>>) :: r f -> r g -> r g
+  (*>>) :: d f -> d g -> d g
   s *>> t = (wrap1 id <<$ s) <<*>> t
-  (<<*) :: r f -> r g -> r f
-  (<<*) = fliftA2 const
+  (<<*) :: d f -> d g -> d f
+  (<<*) = dliftA2 const
 
-instance (Applicative f, DApplicative r) => DApplicative (Compose f r) where
-  fpure x = Compose (pure (fpure x))
+instance (Applicative f, DApplicative d) => DApplicative (Compose f d) where
+  dpure x = Compose (pure (dpure x))
   Compose f <<*>> Compose x = Compose (liftA2 (<<*>>) f x)
 
-fpureTrafo :: DApplicative r => (f ==> g) -> r (f ==>> g)
-fpureTrafo f = fpure (TrafoComp f)
+dpureTrafo :: DApplicative d => (f ==> g) -> d (f ==>> g)
+dpureTrafo f = dpure (TrafoComp f)
 
 wrap1
   :: (f a -> g a)
@@ -77,53 +77,53 @@ wrap7
   -> (f ==>> g ==>> h ==>> i ==>> j ==>> k ==>> l ==>> m) a
 wrap7 f = TrafoComp (wrap6 <$> f)
 
-fliftA1
-  :: DFunctor r
+dliftA1
+  :: DFunctor d
   => (forall a. f a -> g a)
-  -> r f -> r g
-fliftA1 = ffmap
+  -> d f -> d g
+dliftA1 = dfmap
 
-fliftA2
-  :: DApplicative r
+dliftA2
+  :: DApplicative d
   => (forall a. f a -> g a -> h a)
-  -> r f -> r g -> r h
-fliftA2 f s t = (wrap1 <$> f) <<$>> s <<*>> t
+  -> d f -> d g -> d h
+dliftA2 f s t = (wrap1 <$> f) <<$>> s <<*>> t
 
-fliftA3
-  :: DApplicative r
+dliftA3
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a)
-  -> r f -> r g -> r h -> r i
-fliftA3 f s t u = (wrap2 <$> f) <<$>> s <<*>> t <<*>> u
+  -> d f -> d g -> d h -> d i
+dliftA3 f s t u = (wrap2 <$> f) <<$>> s <<*>> t <<*>> u
 
-fliftA4
-  :: DApplicative r
+dliftA4
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a -> j a)
-  -> r f -> r g -> r h -> r i -> r j
-fliftA4 f s t u v = (wrap3 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v
+  -> d f -> d g -> d h -> d i -> d j
+dliftA4 f s t u v = (wrap3 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v
 
-fliftA5
-  :: DApplicative r
+dliftA5
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a)
-  -> r f -> r g -> r h -> r i -> r j -> r k
-fliftA5 f s t u v w = (wrap4 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w
+  -> d f -> d g -> d h -> d i -> d j -> d k
+dliftA5 f s t u v w = (wrap4 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w
 
-fliftA6
-  :: DApplicative r
+dliftA6
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a)
-  -> r f -> r g -> r h -> r i -> r j -> r k -> r l
-fliftA6 f s t u v w x =
+  -> d f -> d g -> d h -> d i -> d j -> d k -> d l
+dliftA6 f s t u v w x =
   (wrap5 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x
 
-fliftA7
-  :: DApplicative r
+dliftA7
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a)
-  -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m
-fliftA7 f s t u v w x y =
+  -> d f -> d g -> d h -> d i -> d j -> d k -> d l -> d m
+dliftA7 f s t u v w x y =
   (wrap6 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y
 
-fliftA8
-  :: DApplicative r
+dliftA8
+  :: DApplicative d
   => (forall a. f a -> g a -> h a -> i a -> j a -> k a -> l a -> m a -> n a)
-  -> r f -> r g -> r h -> r i -> r j -> r k -> r l -> r m -> r n
-fliftA8 f s t u v w x y z =
+  -> d f -> d g -> d h -> d i -> d j -> d k -> d l -> d m -> d n
+dliftA8 f s t u v w x y z =
   (wrap7 <$> f) <<$>> s <<*>> t <<*>> u <<*>> v <<*>> w <<*>> x <<*>> y <<*>> z

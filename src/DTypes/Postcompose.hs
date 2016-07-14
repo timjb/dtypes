@@ -15,22 +15,22 @@ import Control.Applicative (Applicative (..), (<$>), liftA2)
 import Data.Traversable (Traversable (..))
 #endif
 
-newtype Postcompose r f g
+newtype Postcompose d f g
   = Postcompose
-  { getPostcompose :: r (Compose f g)
+  { getPostcompose :: d (Compose f g)
   }
 
-instance (DFunctor rec, Functor f) => DFunctor (Postcompose rec f) where
-  ffmap f = Postcompose . (composeMap f <<$>>) . getPostcompose
+instance (DFunctor d, Functor f) => DFunctor (Postcompose d f) where
+  dfmap f = Postcompose . (composeMap f <<$>>) . getPostcompose
     where composeMap f' = Compose . (f' <$>) . getCompose
 
-instance (DApplicative rec, Applicative f) => DApplicative (Postcompose rec f) where
-  fpure x = Postcompose (fpure (Compose (pure x)))
-  Postcompose f <<*>> Postcompose x = Postcompose (fliftA2 composeAp f x)
+instance (DApplicative d, Applicative f) => DApplicative (Postcompose d f) where
+  dpure x = Postcompose (dpure (Compose (pure x)))
+  Postcompose f <<*>> Postcompose x = Postcompose (dliftA2 composeAp f x)
     where composeAp (Compose g) (Compose y) = Compose (liftA2 ($$) g y)
 
-instance (DTraversable rec, Traversable f) => DTraversable (Postcompose rec f) where
-  fsequenceA (Postcompose x) = fmap Postcompose (ftraverse composeSequenceA x)
+instance (DTraversable d, Traversable f) => DTraversable (Postcompose d f) where
+  dsequenceA (Postcompose x) = fmap Postcompose (dtraverse composeSequenceA x)
     where
       composeSequenceA (Compose y) =
         Compose (fmap Compose (sequenceA (fmap getCompose y)))

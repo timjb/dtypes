@@ -60,9 +60,9 @@ objectFormat name fields =
   where
     serialize val =
       A.object $
-      ftoList $
-      fliftA2 (\field (Identity val) -> Const (serializeField field val)) fields $
-      fiso val
+      dtoList $
+      dliftA2 (\field (Identity val) -> Const (serializeField field val)) fields $
+      diso val
     parse =
       A.withObject name $ \obj ->
-        fosi <$> ftraverse' (\field -> parseField field obj) fields
+        dosi <$> dtraverse' (\field -> parseField field obj) fields

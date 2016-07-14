@@ -12,21 +12,21 @@ import DTypes.Trafo
 
 infixl 4 <<$>>, <<$
 
-class DFunctor (r :: (k -> *) -> *) where
+class DFunctor (d :: (k -> *) -> *) where
   -- axioms:
-  -- ffmap id = id
-  -- ffmap (f . g) = fmap1 f . fmap1 g
-  ffmap :: (f ==> g) -> r f -> r g
+  -- dfmap id = id
+  -- dfmap (f . g) = fmap1 f . fmap1 g
+  dfmap :: (f ==> g) -> d f -> d g
 
   -- | Replace all locations in the input with the same value.
   -- The default definition is @'fmap' . 'const'@, but this may be
   -- overridden with a more efficient version.
-  (<<$) :: (forall a. g a) -> r f -> r g
-  x <<$ r = ffmap (const x) r
+  (<<$) :: (forall a. g a) -> d f -> d g
+  x <<$ d = dfmap (const x) d
 
 -- synonym
-(<<$>>) :: DFunctor r => (f ==> g) -> r f -> r g
-(<<$>>) = ffmap
+(<<$>>) :: DFunctor d => (f ==> g) -> d f -> d g
+(<<$>>) = dfmap
 
-instance (Functor f, DFunctor r) => DFunctor (Compose f r) where
-  ffmap t (Compose x) = Compose (ffmap t <$> x)
+instance (Functor f, DFunctor d) => DFunctor (Compose f d) where
+  dfmap t (Compose x) = Compose (dfmap t <$> x)

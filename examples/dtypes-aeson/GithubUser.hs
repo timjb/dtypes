@@ -71,8 +71,8 @@ makeDType ''GithubUser
 ghUserJSONFormat :: JSONFormat GithubUser
 ghUserJSONFormat =
   objectFormat "GithubUser" $
-  FGithubUser
-    { fuserLogin = field "login"
-    , fuserId = field "id"
-    , fuserAvatarUrl = field "avatar_url"
+  DGithubUser
+    { duserLogin = field "login"
+    , duserId = field "id"
+    , duserAvatarUrl = field "avatar_url"
     }

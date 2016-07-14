@@ -13,24 +13,24 @@ import Control.Applicative (Applicative (..), (<$>))
 import Data.Traversable (Traversable (..))
 #endif
 
-newtype Precompose r f g
+newtype Precompose d f g
   = Precompose
-  { getPrecompose :: r (Compose g f)
+  { getPrecompose :: d (Compose g f)
   }
 
-instance DFunctor r => DFunctor (Precompose r f) where
-  ffmap f = Precompose . (composeMap f <<$>>) . getPrecompose
+instance DFunctor d => DFunctor (Precompose d f) where
+  dfmap f = Precompose . (composeMap f <<$>>) . getPrecompose
     where composeMap f' = Compose . f' . getCompose
 
-instance DApplicative r => DApplicative (Precompose r f) where
-  fpure x = Precompose (fpure (Compose x))
+instance DApplicative d => DApplicative (Precompose d f) where
+  dpure x = Precompose (dpure (Compose x))
   Precompose f <<*>> Precompose x =
-    Precompose (fliftA2 composeAp f x)
+    Precompose (dliftA2 composeAp f x)
     where
       composeAp (Compose g) (Compose y) = Compose (g $$ y)
 
-instance DTraversable r => DTraversable (Precompose r f) where
-  fsequenceA (Precompose x) = Precompose <$> ftraverse assoc x
+instance DTraversable d => DTraversable (Precompose d f) where
+  dsequenceA (Precompose x) = Precompose <$> dtraverse assoc x
     where
       assoc :: Functor f => Compose (Compose f g) h a -> Compose f (Compose g h) a
       assoc (Compose (Compose y)) = Compose (Compose <$> y)

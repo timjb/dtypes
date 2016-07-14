@@ -8,5 +8,5 @@ import Data.Functor.Identity (Identity (..))
 
 class HasDType t where
   type DType t :: (* -> *) -> *
-  fiso :: t -> DType t Identity
-  fosi :: DType t Identity -> t
+  diso :: t -> DType t Identity
+  dosi :: DType t Identity -> t

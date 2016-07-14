@@ -8,7 +8,7 @@ module Main
 
 import qualified Options.Applicative as OA
 import DTypes.TH (makeDType)
-import DTypes.Classes.DTraversable (fsequenceA')
+import DTypes.Classes.DTraversable (dsequenceA')
 import DTypes.Classes.HasDType (HasDType (..))
 
 -- adapted example from the optparse-applicative README
@@ -23,7 +23,7 @@ makeDType ''Sample
 
 sample :: OA.Parser Sample
 sample =
-  fmap fosi $ fsequenceA' $
+  fmap dosi $ dsequenceA' $
   FSample
   { fquiet =
       OA.switch $
