@@ -35,7 +35,10 @@ ftraverse' f = ftraverse (Compose . fmap Identity . f)
 fsequenceA' :: (FTraversable r, Applicative f) => r f -> f (r Identity)
 fsequenceA' = fsequenceA . ffmap (Compose . fmap Identity)
 
-ftoList :: FTraversable rec => rec (Const a) -> [a]
+ftoList
+  :: FTraversable (rec :: (* -> *) -> *)
+  => rec (Const a)
+  -> [a]
 ftoList = getConst . ftraverse' (Const . (:[]) . getConst) -- robot monkey!
 
 {-
