@@ -16,7 +16,7 @@ import DTypes.Trafo
 #if MIN_VERSION_base(4,8,0)
 import Control.Applicative (liftA2)
 #else
-import Control.Applicative ((<$>), liftA2)
+import Control.Applicative (Applicative (..), (<$>), liftA2)
 #endif
 
 infixl 4 <<*>>, <<*, *>>

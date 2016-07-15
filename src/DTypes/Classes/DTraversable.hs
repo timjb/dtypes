@@ -19,6 +19,7 @@ import Data.Functor.Identity (Identity (..))
 import Control.Applicative (Const (..))
 #else
 import Control.Applicative (Applicative (..), (<$>), Const (..))
+import Data.Traversable (Traversable (..))
 #endif
 
 class DFunctor d => DTraversable (d :: (k -> *) -> *) where
