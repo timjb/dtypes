@@ -36,11 +36,11 @@ liftAppEs x args =
     firstArg:nextArgs -> apAppEs [e| $x <$> $firstArg |] nextArgs
 
 -- | Extract the name from a TyVarBndr.
-nameFromTyVarBndr :: TyVarBndr -> Name
+nameFromTyVarBndr :: TyVarBndr a -> Name
 nameFromTyVarBndr bndr =
   case bndr of
-    PlainTV name -> name
-    KindedTV name _kind -> name
+    PlainTV name _ -> name
+    KindedTV name _ _kind -> name
 
 -- | Apply arguments to a type constructor.
 conAppsT :: Name -> [Type] -> Type
