@@ -96,7 +96,7 @@ makeDTypeForDec dec =
       functorTyVarName <- newName "f"
       let kindArrow from to = arrowK `appK` from `appK` to
           starToStarKind = starK `kindArrow` starK
-          functorTyVarBndr = KindedTV functorTyVarName starToStarKind
+          functorTyVarBndr = KindedTV functorTyVarName () starToStarKind
       return (functorTyVarName, functorTyVarBndr)
 
 makeFConForCon :: Name -> Con -> ConQ
@@ -149,7 +149,7 @@ getSimpleConstrInfo con =
 data SimpleTypeInfo
   = SimpleTypeInfo
   { stdi_typeName :: Name
-  , stdi_typeArgs :: [TyVarBndr]
+  , stdi_typeArgs :: [TyVarBndrUnit]
   , stdi_constrs :: [SimpleConstrInfo]
   } deriving (Show)
 
